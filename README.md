@@ -98,7 +98,7 @@ python main.py
 
 * **Language:** Python 3.x
 * **Libraries:** Pandas, PyBaseball, Glob, OS
-* **Environment:** VS Code / WSL
+* **Environment:** Linux or equivalent environment - VS Code / WSL
 
 ---
 

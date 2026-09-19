@@ -43,7 +43,7 @@ TOR therefore applies a **sliding outcome weight**: increasing emphasis for high
 
 ### Prerequisites
 - Python 3.x
-- VS Code / WSL (Recommended environment)
+- Linux (Recommended environment) or equivalent 
 
 ### 1. Install Dependencies
 Install the required Python libraries via pip:

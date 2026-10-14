@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TOR: True Offensive Rating</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>TOR: True Offensive Rating Dashboard</h1>
+    <p>Advanced pitch-level sabermetrics engine powered by Statcast data.</p>
+
+    <h2>🏆 TOR League Leaderboard</h2>
+    <table class="leaderboard">
+        <thead>
+            <tr>
+                <th class="col-rank">Rank</th>
+                <th class="col-player">Player</th>
+                <th class="col-tor">TOR</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td class="col-rank">{{ row.rank }}</td>
+                <td class="col-player">{{ row.player }}</td>
+                <td class="col-tor">{{ row.tor }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

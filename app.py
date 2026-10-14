@@ -35,9 +35,50 @@ all_at_bats = get_all_at_bats(df)
 def get_leaderboard(all_at_bats):
     leaderboard = rank_players(all_at_bats, min_pas=100)
     lb_df = pd.DataFrame(leaderboard, columns=["Player", "TOR"])
+    lb_df.insert(0, "Rank", range(1, len(lb_df) + 1))
     return lb_df
 
 lb_df = get_leaderboard(all_at_bats)
 
 st.subheader("🏆TOR League Leaderboard")
-st.dataframe(lb_df, width="stretch")
+column_config = {
+    "Rank": st.column_config.NumberColumn(
+        "Rank",
+        width=75,
+        format="%d",
+    ),
+    "Player": st.column_config.TextColumn(
+        "Player",
+        width=250,
+    ),
+    "TOR": st.column_config.NumberColumn(
+        "TOR",
+        width=150,
+        format="%.2f",
+    ),
+}
+event = st.dataframe(
+    lb_df,
+    width="stretch",
+    column_config=column_config,
+    on_select="rerun",
+    selection_mode="single-row",
+    hide_index=True,
+)
+
+selection = event.get("selection", {})
+selected_rows = selection.get("rows", [])
+
+@st.dialog("Player Card", width="large")
+def show_player_card(player_name, all_at_bats):
+    player_map = group_by_player(all_at_bats)
+    player_at_bats = [ab for ab in player_map.get(player_name, []) if ab.is_valid_ab()]
+
+    st.subheader(player_name)
+    st.metric("TOR", f"{player_tor(player_at_bats):.2f}")
+    # TODO: top-left image, bottom-left tabbed tables, top-right trend chart, bottom-right panel
+
+if selected_rows:
+    selected_row = selected_rows[0]
+    selected_player = lb_df.iloc[selected_row]["Player"]
+    show_player_card(selected_player, all_at_bats)

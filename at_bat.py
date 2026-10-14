@@ -94,9 +94,10 @@ def _lookup_tier(value, tiers, default=0):
 
 
 class AtBat:
-    def __init__(self, player_name, final_outcome):
+    def __init__(self, player_name, final_outcome, game_date):
         self.player_name = player_name
         self.final_outcome = final_outcome
+        self.game_date = game_date
         self.pitches = []
 
     def add_pitch(self, pitch):

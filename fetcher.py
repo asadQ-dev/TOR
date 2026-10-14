@@ -32,7 +32,8 @@ def load_statcast_csv(filepath):
         'balls',
         'strikes',
         'game_pk',
-        'bat_speed'
+        'bat_speed',
+        'game_date'
     ]
     df = df[cols_we_need]
     return df
@@ -42,7 +43,8 @@ def build_at_bats(df, batter_name):
     at_bats = []
     for (game_id, ab_num), group in player_df.groupby(['game_pk', 'at_bat_number']):
         final_outcome = group['events'].dropna().iloc[-1] if not group['events'].dropna().empty else "unknown"
-        current_ab = AtBat(batter_name, final_outcome)
+        game_date = group['game_date'].iloc[0]
+        current_ab = AtBat(batter_name, final_outcome, game_date)
         
         # 3. Loop through every pitch in this group
         for _, row in group.iterrows():

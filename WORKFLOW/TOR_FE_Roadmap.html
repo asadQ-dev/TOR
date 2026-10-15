@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TOR Front-End Roadmap</title>
+<style>
+  /* ---------- Page setup ---------- */
+  @page {
+    size: Letter;
+    margin: 14mm 14mm 13mm 14mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Segoe UI Variable Text", -apple-system,
+                 BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: #33414f;
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Type ---------- */
+  h2 {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: #1b6ca8;
+    margin: 0 0 7pt;
+    padding-bottom: 4.5pt;
+    border-bottom: 1px solid #e2e8ed;
+  }
+
+  p { margin: 0 0 7pt; }
+  p:last-child { margin-bottom: 0; }
+
+  ul { margin: 0; padding: 0; list-style: none; }
+
+  code, .mono {
+    font-family: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+    font-size: .90em;
+    background: #eef2f5;
+    color: #17415c;
+    padding: 1pt 3pt;
+    border-radius: 2pt;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    background: #15202b;
+    color: #ffffff;
+    padding: 17pt 19pt 14pt;
+    border-radius: 3pt;
+    margin-bottom: 15pt;
+  }
+
+  .masthead .eyebrow {
+    margin: 0 0 7pt;
+    font-size: 7pt;
+    font-weight: 600;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: #8fb8d6;
+  }
+
+  .masthead h1 {
+    margin: 0 0 7pt;
+    font-size: 26pt;
+    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  .masthead .lede {
+    margin: 0;
+    max-width: 148mm;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #c3d3e0;
+  }
+
+  .masthead .meta {
+    display: flex;
+    gap: 22pt;
+    margin-top: 13pt;
+    padding-top: 9pt;
+    border-top: 1px solid rgba(255,255,255,.16);
+  }
+
+  .masthead .meta div { font-size: 8.5pt; color: #c3d3e0; }
+
+  .masthead .meta strong {
+    display: block;
+    margin-bottom: 2pt;
+    font-size: 6.5pt;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: #7fa6c4;
+  }
+
+  /* ---------- Two-column intro ---------- */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18pt;
+    margin-bottom: 14pt;
+  }
+
+  /* ---------- Ground rules ---------- */
+  .rules {
+    background: #fdf6ea;
+    border-left: 3px solid #b26a00;
+    border-radius: 0 2pt 2pt 0;
+    padding: 10pt 13pt;
+    margin-bottom: 16pt;
+  }
+
+  .rules h2 {
+    color: #b26a00;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 6pt;
+  }
+
+  .rules li {
+    position: relative;
+    padding-left: 11pt;
+    margin-bottom: 4pt;
+    color: #5c4a2e;
+    line-height: 1.42;
+  }
+
+  .rules li:last-child { margin-bottom: 0; }
+
+  .rules li::before {
+    content: "";
+    position: absolute;
+    left: 1pt;
+    top: 5.3pt;
+    width: 3pt;
+    height: 3pt;
+    border-radius: 50%;
+    background: #b26a00;
+  }
+
+  /* ---------- Step cards ---------- */
+  .step {
+    border: 1px solid #dfe5ea;
+    border-radius: 3pt;
+    margin-bottom: 9pt;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 9pt;
+    padding: 6.5pt 11pt;
+    background: #f4f6f8;
+    border-bottom: 1px solid #dfe5ea;
+  }
+
+  .step-num {
+    flex: 0 0 auto;
+    width: 16pt;
+    height: 16pt;
+    border-radius: 2pt;
+    background: #1b6ca8;
+    color: #ffffff;
+    font-size: 9pt;
+    font-weight: 600;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-head h3 {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: 11pt;
+    font-weight: 600;
+    color: #15202b;
+    letter-spacing: -0.005em;
+  }
+
+  .priority {
+    flex: 0 0 auto;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #8494a2;
+    white-space: nowrap;
+  }
+
+  .step-body { padding: 8.5pt 11pt 9.5pt; }
+
+  .subtitle {
+    margin: 0 0 7pt;
+    font-size: 8.5pt;
+    font-style: italic;
+    color: #7a8896;
+  }
+
+  .label {
+    font-size: 6.8pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #1b6ca8;
+  }
+
+  .field { margin: 0 0 7pt; }
+  .field .label { margin-right: 5pt; }
+
+  .focus { margin-bottom: 7pt; }
+  .focus > .label { display: block; margin-bottom: 4pt; }
+
+  .focus li {
+    position: relative;
+    padding-left: 11pt;
+    margin-bottom: 3.5pt;
+    line-height: 1.42;
+  }
+
+  .focus li:last-child { margin-bottom: 0; }
+
+  .focus li::before {
+    content: "";
+    position: absolute;
+    left: 1pt;
+    top: 5.3pt;
+    width: 3pt;
+    height: 3pt;
+    border-radius: 50%;
+    background: #9dbdd6;
+  }
+
+  .milestone {
+    background: #eef5fb;
+    border-left: 3px solid #1b6ca8;
+    border-radius: 0 2pt 2pt 0;
+    padding: 6pt 9pt;
+    font-size: 9pt;
+    color: #1f3b52;
+  }
+
+  .milestone .label {
+    display: block;
+    margin-bottom: 2pt;
+    color: #124e7a;
+  }
+
+  .note {
+    margin: 6pt 0 0;
+    font-size: 8.5pt;
+    font-style: italic;
+    color: #74838f;
+    line-height: 1.4;
+  }
+
+  .note .label {
+    font-style: normal;
+    color: #b26a00;
+    margin-right: 5pt;
+  }
+
+  .rule-callout {
+    margin-top: 7pt;
+    background: #fdf6ea;
+    border-left: 3px solid #b26a00;
+    border-radius: 0 2pt 2pt 0;
+    padding: 6pt 9pt;
+    font-size: 8.8pt;
+    color: #6b4a12;
+  }
+
+  .rule-callout .label { color: #b26a00; margin-right: 5pt; }
+
+  /* ---------- Table ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16pt;
+    font-size: 8.5pt;
+  }
+
+  thead th {
+    background: #15202b;
+    color: #ffffff;
+    text-align: left;
+    padding: 5pt 9pt;
+    font-size: 6.8pt;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  tbody td {
+    padding: 4.5pt 9pt;
+    border-bottom: 1px solid #e7ecf0;
+    vertical-align: top;
+    line-height: 1.35;
+  }
+
+  tbody tr:nth-child(even) { background: #f7f9fa; }
+
+  tbody td.step-col {
+    text-align: center;
+    font-weight: 700;
+    color: #1b6ca8;
+    width: 8%;
+  }
+
+  tbody td.topic-col { width: 38%; color: #15202b; font-weight: 600; }
+
+  /* ---------- Chips ---------- */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6pt;
+    margin-bottom: 16pt;
+  }
+
+  .chip {
+    border: 1px solid #dfe5ea;
+    background: #f7f9fa;
+    border-radius: 99pt;
+    padding: 4pt 11pt;
+    font-size: 8.5pt;
+    color: #33414f;
+  }
+
+  .chip b { color: #1b6ca8; margin-right: 5pt; font-weight: 700; }
+
+  /* ---------- Final callout ---------- */
+  .final {
+    background: #15202b;
+    color: #ffffff;
+    border-radius: 3pt;
+    padding: 13pt 16pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .final .label {
+    display: block;
+    margin-bottom: 5pt;
+    color: #7fa6c4;
+    font-size: 6.8pt;
+    letter-spacing: .16em;
+  }
+
+  .final p {
+    margin: 0;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #dbe6ee;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="masthead">
+    <p class="eyebrow">Learning Plan</p>
+    <h1>TOR Front-End Roadmap</h1>
+    <p class="lede">
+      FastAPI + Jinja2 + HTML/CSS/JS — a focused, step-by-step plan for the
+      TOR leaderboard and player cards.
+    </p>
+    <div class="meta">
+      <div><strong>Scope</strong>Web layer only</div>
+      <div><strong>Stack</strong>FastAPI · Jinja2 · Vanilla JS</div>
+      <div><strong>Sequence</strong>Steps 0 – 8</div>
+    </div>
+  </header>
+
+  <!-- ============ INTRO ============ -->
+  <div class="two-col">
+    <div>
+      <h2>Project goal</h2>
+      <p>
+        A professional-looking TOR dashboard: a full-width ranked leaderboard
+        (narrow Rank and number columns, flexible Name column), where clicking a
+        player pops a card over the page with their headshot, raw data,
+        component breakdown, and a date-range histogram.
+      </p>
+    </div>
+    <div>
+      <h2>Starting point</h2>
+      <p>
+        The scoring engine and calibration config already exist and stay
+        untouched. A <code>server.py</code> has been generated but is not yet
+        understood, and that comes first. This roadmap covers only the web
+        layer: serving data, templates, markup, styling, and interaction.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ GROUND RULES ============ -->
+  <section class="rules">
+    <h2>Ground rules</h2>
+    <ul>
+      <li>Read only the doc section for the current step. Attempt a minimal version yourself. Then test it in the browser before adding anything.</li>
+      <li>One change at a time. Commit to Git after each milestone.</li>
+      <li>Verified means you saw it work in the browser, not that code was generated.</li>
+      <li>No CSS frameworks (Tailwind, Bootstrap) and no JS frameworks until plain versions are understood.</li>
+    </ul>
+  </section>
+
+  <!-- ============ STEPS ============ -->
+  <h2>The steps</h2>
+
+  <!-- Step 0 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">0</span>
+      <h3>Understand <code>server.py</code></h3>
+      <span class="priority">First</span>
+    </div>
+    <div class="step-body">
+      <p class="subtitle">Do this before writing any HTML.</p>
+      <p class="field">
+        <span class="label">Docs</span>FastAPI tutorial: First Steps, Path
+        Parameters, and Query Parameters sections.
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>What the app object, a route decorator, and a path function each do.</li>
+          <li>How uvicorn runs the app, and what happens between typing a URL and getting a response.</li>
+          <li>Where <code>server.py</code> calls the TOR engine, and what shape of data comes back.</li>
+          <li>Which routes exist and what each one returns.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        Run the server, open each route in the browser, and explain in your own
+        words what every route does and where its data comes from.
+      </div>
+      <p class="note">
+        <span class="label">Note</span>If any line in <code>server.py</code> is
+        unclear, mark it and ask. Do not build on code you cannot explain.
+      </p>
+    </div>
+  </section>
+
+  <!-- Step 1 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <h3>Render data with Jinja2</h3>
+      <span class="priority">Second</span>
+    </div>
+    <div class="step-body">
+      <p class="field">
+        <span class="label">Docs</span>FastAPI: Templates. Jinja2: Template
+        Designer Documentation (variables, for loops, filters).
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>How a route passes data into a template.</li>
+          <li>Looping over leaderboard rows and printing fields.</li>
+          <li>Formatting numbers with filters (for example, one decimal place on the score).</li>
+          <li>Template inheritance (a base layout), but only once one page works.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        A route renders a plain, unstyled HTML page showing the real top 25
+        players from the engine.
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <h3>HTML structure</h3>
+      <span class="priority">Third</span>
+    </div>
+    <div class="step-body">
+      <p class="field">
+        <span class="label">Docs</span>MDN HTML basics, plus the pages for table
+        elements and <code>data-*</code> attributes.
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>Page skeleton: <code>head</code>, <code>body</code>, <code>header</code>, <code>main</code>.</li>
+          <li>Leaderboard markup (a semantic table or a grid of rows).</li>
+          <li>Attaching a stable player ID to every row with a <code>data-</code> attribute. Never identify a player by name alone.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        Clean, valid markup where each row carries a player ID you can read back
+        later.
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <h3>CSS layout and visual design</h3>
+      <span class="priority">Fourth</span>
+    </div>
+    <div class="step-body">
+      <p class="subtitle">The step that fixes the Streamlit table problem.</p>
+      <p class="field">
+        <span class="label">Docs</span>MDN CSS basics, CSS Grid guide, box model,
+        custom properties (CSS variables).
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>Grid column definitions: fixed widths for Rank and numbers, <code>1fr</code> for Name.</li>
+          <li>Spacing, typography, and a dark theme defined with CSS variables.</li>
+          <li>Row hover and selected states.</li>
+          <li>Responsive behavior at narrower widths.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        The leaderboard spans the full page width with narrow numeric columns and
+        a flexible Name column, and looks sharp enough that you would show it in
+        a portfolio.
+      </div>
+      <p class="note">
+        <span class="label">Note</span>Define colors and sizes once as variables
+        so later restyling is a one-file edit.
+      </p>
+    </div>
+  </section>
+
+  <!-- Step 4 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <h3>The player card as a native dialog</h3>
+      <span class="priority">Fifth</span>
+    </div>
+    <div class="step-body">
+      <p class="field">
+        <span class="label">Docs</span>MDN: the <code>&lt;dialog&gt;</code>
+        element, <code>showModal()</code>, <code>close()</code>, and the
+        <code>::backdrop</code> pseudo-element.
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>A modal that pops over the leaderboard while the page underneath stays unchanged.</li>
+          <li>Opening and closing it, including the Escape key and clicking outside.</li>
+          <li>Styling the card layout: image top-left, raw data bottom-left, histogram top-right, component breakdown bottom-right (leading idea).</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        Clicking a row opens a placeholder card over the page that shows that
+        row's player ID, and it closes cleanly.
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 5 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <h3>JavaScript, only what is needed</h3>
+      <span class="priority">Sixth</span>
+    </div>
+    <div class="step-body">
+      <p class="field">
+        <span class="label">Docs</span>MDN JavaScript Guide: only the sections on
+        selecting DOM elements, events, <code>fetch</code>, and
+        <code>async/await</code>.
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>Listening for row clicks and reading the player ID from the row.</li>
+          <li>Calling a new FastAPI route such as <code>/player/{id}</code> with <code>fetch</code>.</li>
+          <li>Filling the card with the JSON that comes back.</li>
+          <li>Handling a failed or empty response.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        Clicking a row fetches that player's data from FastAPI and displays their
+        name, TOR score, and component scores in the card.
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 6 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">6</span>
+      <h3>Headshots and card content</h3>
+      <span class="priority">Seventh</span>
+    </div>
+    <div class="step-body">
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>Decide where the headshot image comes from before writing display code.</li>
+          <li>The engine must keep the batter ID to make that mapping possible.</li>
+          <li>A fallback image when no headshot exists.</li>
+          <li>Component breakdown display.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        The right headshot appears on every card, and a missing one fails
+        gracefully.
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 7 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">7</span>
+      <h3>Histogram and date range</h3>
+      <span class="priority">Eighth</span>
+    </div>
+    <div class="step-body">
+      <p class="field">
+        <span class="label">Docs</span>Chosen after Step 5. Likely Chart.js or
+        Plotly.js loaded by script tag, plus MDN date input.
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>The engine must keep <code>game_date</code> on each at-bat.</li>
+          <li>Start with one histogram and one variable.</li>
+          <li>Date inputs that call a FastAPI route with start and end dates and redraw the chart.</li>
+          <li>Handling invalid ranges and empty results.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        Choosing a date range updates the card's histogram to show only that
+        window.
+      </div>
+      <div class="rule-callout">
+        <span class="label">Rule</span>Filtering chart observations must never
+        silently recalculate the official TOR score.
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 8 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">8</span>
+      <h3>Performance and polish</h3>
+      <span class="priority">Last</span>
+    </div>
+    <div class="step-body">
+      <p class="field">
+        <span class="label">Docs</span>FastAPI: Static Files. Python
+        <code>functools.lru_cache</code>, or loading data once at server startup.
+      </p>
+      <div class="focus">
+        <span class="label">Focus</span>
+        <ul>
+          <li>Serving CSS, JS, and images as static files.</li>
+          <li>Loading the engine's results once instead of on every request (the cold load was about 19 seconds).</li>
+          <li>Loading, empty, and error states, a page title, a favicon.</li>
+        </ul>
+      </div>
+      <div class="milestone">
+        <span class="label">Milestone</span>
+        The page loads fast, and every failure mode shows a clear message instead
+        of a blank space.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SEQUENCE ============ -->
+  <h2>Recommended sequence</h2>
+  <table>
+    <colgroup>
+      <col style="width:8%">
+      <col style="width:38%">
+      <col style="width:54%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th style="text-align:center">Step</th>
+        <th>Topic</th>
+        <th>First milestone</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="step-col">0</td><td class="topic-col">Read server.py</td><td>Explain every route</td></tr>
+      <tr><td class="step-col">1</td><td class="topic-col">Jinja2 templates</td><td>Real data on a plain page</td></tr>
+      <tr><td class="step-col">2</td><td class="topic-col">HTML structure</td><td>Rows carry player IDs</td></tr>
+      <tr><td class="step-col">3</td><td class="topic-col">CSS grid</td><td>Sharp full-width leaderboard</td></tr>
+      <tr><td class="step-col">4</td><td class="topic-col"><code>&lt;dialog&gt;</code></td><td>Click opens a placeholder card</td></tr>
+      <tr><td class="step-col">5</td><td class="topic-col">JavaScript + fetch</td><td>Card shows real player data</td></tr>
+      <tr><td class="step-col">6</td><td class="topic-col">Headshots</td><td>Correct image per player</td></tr>
+      <tr><td class="step-col">7</td><td class="topic-col">Histogram + dates</td><td>Date range updates chart</td></tr>
+      <tr><td class="step-col">8</td><td class="topic-col">Static files + caching</td><td>Fast, polished, handles errors</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ BOOKMARKS ============ -->
+  <h2>Bookmarks folder &nbsp;·&nbsp; most used first</h2>
+  <div class="chips">
+    <span class="chip"><b>1</b>HTML (MDN)</span>
+    <span class="chip"><b>2</b>CSS (MDN)</span>
+    <span class="chip"><b>3</b>Jinja2</span>
+    <span class="chip"><b>4</b>FastAPI</span>
+    <span class="chip"><b>5</b>JavaScript (MDN)</span>
+  </div>
+
+  <!-- ============ FINAL ============ -->
+  <section class="final">
+    <span class="label">Your first milestone</span>
+    <p>
+      Run <code style="background:rgba(255,255,255,.10); color:#cfe3f2;">server.py</code>,
+      hit every route in the browser, and explain what each one does. Then render
+      the real leaderboard on a plain HTML page. Styling comes after that.
+    </p>
+  </section>
+
+</body>
+</html>

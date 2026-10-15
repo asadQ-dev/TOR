@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaders</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Leaders</h1>
+    <table>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.rank }}</td>
+            <td>{{ row.player }}</td>
+            <td>{{ row.tor }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

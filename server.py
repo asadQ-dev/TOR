@@ -30,5 +30,5 @@ def leaderboard(request: Request):
         for i, (name, score) in enumerate(ranked, start=1)
     ]
     return templates.TemplateResponse(
-        "leaderboard.html", {"request": request, "rows": rows}
+        request, "leaderboard.html", {"rows": rows}
     )

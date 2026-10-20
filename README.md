@@ -62,6 +62,38 @@ statcast_data/
 
 ## 💻 Usage
 
+### FastAPI dashboard (in progress)
+
+With your Python environment active, install the web dependencies if needed:
+
+```bash
+pip install fastapi uvicorn jinja2
+```
+
+The dashboard also uses the analytics dependencies listed above and requires
+`statcast_data/2026_to_date.csv`, which is not included in Git.
+From the repository root, start the server:
+
+```bash
+python -m uvicorn server:app --reload
+```
+
+Wait for `Application startup complete`, then open http://127.0.0.1:8000/.
+Initial data preparation can take time. Stop with **Ctrl+C** in that terminal
+and wait for the prompt before restarting. Python edits reload automatically;
+refresh the browser for HTML/CSS/JavaScript edits (hard-refresh if assets are cached).
+
+Click a player name to open a modal with TOR and contact metrics fetched from
+`GET /api/player/{player_name}`. The initial card is functional; the four-section
+layout, identity images, metric tabs, and date-filtered trends are not implemented yet.
+The endpoint currently returns an error object with HTTP 200 for unknown names,
+uses zero for missing measurements, and calculates hard-hit rate over all positive
+recorded exit velocities rather than only balls in play. These behaviors need
+review before treating the API as finalized. The Streamlit frontend remains as
+a temporary reference.
+
+### Console analysis
+
 The primary execution flow is handled by `main.py`. The script relies on a `DATA_SOURCE` toggle at the top of the file to switch between local CSV processing and live API fetching:
 
 ```python

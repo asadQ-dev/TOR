@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TOR: True Offensive Rating</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/script.js" defer></script>
 </head>
 <body>
     <h1>TOR: True Offensive Rating Dashboard</h1>
@@ -22,11 +24,52 @@
             {% for row in rows %}
             <tr>
                 <td class="col-rank">{{ row.rank }}</td>
-                <td class="col-player">{{ row.player }}</td>
+                <td class="col-player">
+                    <button type="button" class="player-button"
+                            data-player="{{ row.player }}" data-tor="{{ row.tor }}"
+                            aria-haspopup="dialog" aria-controls="player-dialog">
+                        {{ row.player }}
+                    </button>
+                </td>
                 <td class="col-tor">{{ row.tor }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <dialog id="player-dialog" aria-labelledby="player-name"
+            aria-describedby="player-dialog-note">
+        <header class="player-dialog-header">
+            <div>
+                <p class="eyebrow">Player overview</p>
+                <h2 id="player-name"></h2>
+            </div>
+            <button type="button" class="dialog-close" autofocus>Close</button>
+        </header>
+        <p id="player-dialog-note" role="status" aria-live="polite"></p>
+        <button type="button" id="player-retry" class="dialog-close" hidden>Retry</button>
+        <div id="player-details" hidden>
+        <section class="player-summary" aria-label="Player rating">
+            <p class="eyebrow">TOR</p>
+            <p id="player-tor"></p>
+        </section>
+        <section class="player-metrics" aria-labelledby="metrics-heading">
+            <h3 id="metrics-heading">Contact metrics</h3>
+            <dl class="metric-grid">
+                <div><dt>Average exit velocity</dt><dd id="avg-ev"></dd></div>
+                <div><dt>Max exit velocity</dt><dd id="max-ev"></dd></div>
+                <div><dt>Average bat speed</dt><dd id="avg-bs"></dd></div>
+                <div><dt>Max bat speed</dt><dd id="max-bs"></dd></div>
+                <div><dt>Hard hits</dt><dd id="hard-hits"></dd></div>
+                <div><dt>Hard-hit rate (recorded EV)</dt><dd id="hard-hit-rate"></dd></div>
+            </dl>
+            <p class="metric-note">
+                Values come from the current player API. Its hard-hit rate includes
+                all recorded positive exit velocities, not only balls in play.
+                Missing measurements currently return zero; data handling is pending review.
+            </p>
+        </section>
+        </div>
+    </dialog>
 </body>
 </html>

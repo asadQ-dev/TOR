@@ -1,6 +1,6 @@
 import math
 
-from at_bat import CONTACT_DESCRIPTIONS, QUALITY_CONTACT_TIERS
+from at_bat import CONTACT_DESCRIPTIONS, QUALITY_CONTACT_TIERS, BAT_SPEED_TIERS
 from scorer import player_tor
 
 
@@ -29,17 +29,26 @@ def get_trends(player_at_bats, start_date, end_date):
 
     daily_data = []
     qualifying_exit_velos = []
+    qualifying_bat_speeds = []
+
     exit_velo_cutoff = min(threshold for threshold, _ in QUALITY_CONTACT_TIERS)
+    bat_speed_cutoff = min(threshold for threshold, _ in BAT_SPEED_TIERS)
 
     for game_date, at_bats in sorted(ab_by_date.items()):
         daily_exit_velos = []
+        daily_bat_speeds = []
+
         excluded_exit_velo_count = 0
         missing_exit_velo_count = 0
+        
         for ab in at_bats:
             for pitch in ab.pitches:
                 if pitch.description not in CONTACT_DESCRIPTIONS:
                     continue
+                
                 exit_velo = pitch.exit_velo
+                bat_speed = pitch.bat_speed
+                
                 # The loader represents missing exit velocity with zero.
                 if exit_velo is None or not math.isfinite(exit_velo) or exit_velo <= 0:
                     missing_exit_velo_count += 1
@@ -47,9 +56,17 @@ def get_trends(player_at_bats, start_date, end_date):
                     daily_exit_velos.append(exit_velo)
                 else:
                     excluded_exit_velo_count += 1
+
+                if bat_speed is not None and math.isfinite(bat_speed) and bat_speed > bat_speed_cutoff:
+                    daily_bat_speeds.append(bat_speed)
+                    qualifying_bat_speeds.append(bat_speed)
+                    
         qualifying_exit_velos.extend(daily_exit_velos)
+        qualifying_bat_speeds.extend(daily_bat_speeds)
+        
 
         daily_avg_exit_velo = sum(daily_exit_velos) / len(daily_exit_velos) if daily_exit_velos else None
+        daily_avg_bat_speed = sum(daily_bat_speeds) / len(daily_bat_speeds) if daily_bat_speeds else None
 
         daily_data.append({
             "date": game_date,
@@ -60,6 +77,9 @@ def get_trends(player_at_bats, start_date, end_date):
             "excluded_exit_velo_count": excluded_exit_velo_count,
             "missing_exit_velo_count": missing_exit_velo_count,
             "exit_velo_z_score": None,
+            "avg_bat_speed": daily_avg_bat_speed,
+            "qualifying_bat_speed_count": len(daily_bat_speeds),
+            "bat_speed_z_score": None,
         })
 
     # Window-relative variation of daily means, not a league or per-PA reference.
@@ -87,8 +107,28 @@ def get_trends(player_at_bats, start_date, end_date):
         variance_exit_velo = sum(
             (exit_velo - mean_exit_velo) ** 2 for exit_velo in qualifying_exit_velos
         ) / len(qualifying_exit_velos)
+        
         stddev_exit_velo = math.sqrt(variance_exit_velo)
+        
         for day in daily_data:
             if stddev_exit_velo > 0 and day["avg_exit_velo"] is not None:
                 day["exit_velo_z_score"] = round((day["avg_exit_velo"] - mean_exit_velo) / stddev_exit_velo, 2)
+            else:
+                day["exit_velo_z_score"] = 0
+                
+    # Daily bat speed means relative to individual qualifying measurements in this window.
+    if len(qualifying_bat_speeds) > 1:
+        mean_bat_speed = sum(qualifying_bat_speeds) / len(qualifying_bat_speeds)
+        variance_bat_speed = sum(
+            (bat_speed - mean_bat_speed) ** 2 for bat_speed in qualifying_bat_speeds
+        ) / len(qualifying_bat_speeds)
+        
+        stddev_bat_speed = math.sqrt(variance_bat_speed)
+        
+        for day in daily_data:
+            if stddev_bat_speed > 0 and day["avg_bat_speed"] is not None:
+                day["bat_speed_z_score"] = round((day["avg_bat_speed"] - mean_bat_speed) / stddev_bat_speed, 2)
+            else:
+                day["bat_speed_z_score"] = 0
+
     return daily_data

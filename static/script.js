@@ -1,5 +1,6 @@
 const playerDialog = document.getElementById("player-dialog");
 const playerName = document.getElementById("player-name");
+const playerIdentityName = document.getElementById("player-identity-name");
 const closeButton = playerDialog.querySelector(".dialog-close");
 const playerDetails = document.getElementById("player-details");
 const playerStatus = document.getElementById("player-dialog-note");
@@ -67,6 +68,7 @@ async function loadPlayerDetails(name) {
 document.querySelectorAll(".player-button").forEach((button) => {
     button.addEventListener("click", () => {
         playerName.textContent = button.dataset.player;
+        playerIdentityName.textContent = button.dataset.player;
         selectedPlayer = button.dataset.player;
         playerDialog.showModal();
         loadPlayerDetails(selectedPlayer);
@@ -80,6 +82,7 @@ closeButton.addEventListener("click", () => {
 retryButton.addEventListener("click", () => loadPlayerDetails(selectedPlayer));
 
 playerDialog.addEventListener("close", () => {
+    if (playerDialog.open) return;
     activeRequest?.abort();
     activeRequest = undefined;
 });

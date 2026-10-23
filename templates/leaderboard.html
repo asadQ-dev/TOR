@@ -41,7 +41,7 @@
             aria-describedby="player-dialog-note">
         <header class="player-dialog-header">
             <div>
-                <p class="eyebrow">Player overview</p>
+                <p class="eyebrow">TOR / Player laboratory</p>
                 <h2 id="player-name"></h2>
             </div>
             <button type="button" class="dialog-close" autofocus>Close</button>
@@ -49,26 +49,167 @@
         <p id="player-dialog-note" role="status" aria-live="polite"></p>
         <button type="button" id="player-retry" class="dialog-close" hidden>Retry</button>
         <div id="player-details" hidden>
-        <section class="player-summary" aria-label="Player rating">
-            <p class="eyebrow">TOR</p>
-            <p id="player-tor"></p>
-        </section>
-        <section class="player-metrics" aria-labelledby="metrics-heading">
-            <h3 id="metrics-heading">Contact metrics</h3>
-            <dl class="metric-grid">
-                <div><dt>Average exit velocity</dt><dd id="avg-ev"></dd></div>
-                <div><dt>Max exit velocity</dt><dd id="max-ev"></dd></div>
-                <div><dt>Average bat speed</dt><dd id="avg-bs"></dd></div>
-                <div><dt>Max bat speed</dt><dd id="max-bs"></dd></div>
-                <div><dt>Hard hits</dt><dd id="hard-hits"></dd></div>
-                <div><dt>Hard-hit rate (recorded EV)</dt><dd id="hard-hit-rate"></dd></div>
-            </dl>
-            <p class="metric-note">
-                Values come from the current player API. Its hard-hit rate includes
-                all recorded positive exit velocities, not only balls in play.
-                Missing measurements currently return zero; data handling is pending review.
-            </p>
-        </section>
+            <div class="card-layout">
+                <div class="card-column identity-column">
+                    <section class="card-panel identity-panel" aria-labelledby="identity-heading">
+                        <div class="headshot-placeholder" aria-label="Headshot not connected">
+                            <svg viewBox="0 0 100 110" aria-hidden="true">
+                                <circle cx="50" cy="33" r="20"/>
+                                <path d="M12 105v-15a38 38 0 0 1 76 0v15z"/>
+                            </svg>
+                            <span>Headshot pending</span>
+                        </div>
+                        <div class="identity-copy">
+                            <p class="eyebrow" id="identity-heading">Player identity</p>
+                            <p class="identity-name" id="player-identity-name"></p>
+                            <p class="muted">Team not connected</p>
+                            <div class="rating-summary">
+                                <span class="eyebrow">Overall TOR</span>
+                                <strong id="player-tor"></strong>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="card-panel metrics-panel" aria-labelledby="metrics-heading">
+                        <div class="panel-heading">
+                            <div>
+                                <p class="eyebrow">The numbers</p>
+                                <h3 id="metrics-heading">Contact profile</h3>
+                            </div>
+                            <span class="data-badge">Live API</span>
+                        </div>
+                        <p class="panel-caption">Currently available player metrics</p>
+                        <table class="metrics-table">
+                            <thead><tr><th scope="col">Metric</th><th scope="col">Value</th></tr></thead>
+                            <tbody>
+                                <tr><th scope="row">Average exit velocity</th><td id="avg-ev"></td></tr>
+                                <tr><th scope="row">Max exit velocity</th><td id="max-ev"></td></tr>
+                                <tr><th scope="row">Average bat speed</th><td id="avg-bs"></td></tr>
+                                <tr><th scope="row">Max bat speed</th><td id="max-bs"></td></tr>
+                                <tr><th scope="row">Hard hits</th><td id="hard-hits"></td></tr>
+                                <tr><th scope="row">Hard-hit rate (recorded EV)</th><td id="hard-hit-rate"></td></tr>
+                            </tbody>
+                        </table>
+                        <p class="metric-note">More fields, column selection, and sorting are planned;
+                            this is not the complete data inventory.</p>
+                        <details class="data-caveat">
+                            <summary>Current data limitations</summary>
+                            <p class="metric-note">
+                                Hard-hit rate currently includes all recorded positive exit
+                                velocities, not only balls in play. Missing measurements return
+                                zero. Both definitions need backend review.
+                            </p>
+                        </details>
+                    </section>
+                </div>
+
+                <div class="card-column analysis-column">
+                    <section class="card-panel trend-panel" aria-labelledby="trend-heading">
+                        <div class="panel-heading">
+                            <div>
+                                <p class="eyebrow">The bigger picture</p>
+                                <h3 id="trend-heading">Performance over time</h3>
+                            </div>
+                            <span class="preview-badge">Illustrative only</span>
+                        </div>
+                        <p class="panel-caption" id="chart-preview-note">
+                            Design sample, identical for every player. No player trend or z-score
+                            has been calculated. Controls are disabled until analysis is connected.
+                        </p>
+                        <div class="chart-toolbar">
+                            <label>Metric
+                                <select disabled aria-describedby="chart-preview-note">
+                                    <option>TOR</option>
+                                    <option>Exit velocity</option>
+                                    <option>Bat speed</option>
+                                </select>
+                            </label>
+                            <label>Visualization
+                                <select disabled aria-describedby="chart-preview-note">
+                                    <option>Trend line</option>
+                                    <option>Distribution (planned)</option>
+                                </select>
+                            </label>
+                        </div>
+                        <figure class="trend-figure">
+                            <svg class="trend-chart" viewBox="0 0 660 290" role="img"
+                                 aria-labelledby="sample-chart-title sample-chart-description">
+                                <title id="sample-chart-title">Illustrative trend layout, not player data</title>
+                                <desc id="sample-chart-description">
+                                    A sample line rising from blue below a central baseline to red
+                                    above it. The eventual chart will use validated reference statistics.
+                                </desc>
+                                <defs>
+                                    <linearGradient id="sample-line-gradient" x1="0" y1="1" x2="0" y2="0">
+                                        <stop offset="0%" stop-color="#74b9ff"/>
+                                        <stop offset="50%" stop-color="#ccd6e4"/>
+                                        <stop offset="100%" stop-color="#ff8b83"/>
+                                    </linearGradient>
+                                    <linearGradient id="sample-area-gradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#ff8b83" stop-opacity=".16"/>
+                                        <stop offset="100%" stop-color="#74b9ff" stop-opacity=".02"/>
+                                    </linearGradient>
+                                </defs>
+                                <g class="chart-grid">
+                                    <path d="M55 45H635 M55 95H635 M55 195H635 M55 245H635"/>
+                                    <path d="M55 30V245 M200 30V245 M345 30V245 M490 30V245 M635 30V245"/>
+                                </g>
+                                <path class="chart-baseline" d="M55 145H635"/>
+                                <path fill="url(#sample-area-gradient)"
+                                      d="M55 215 L100 195 L145 205 L190 155 L235 170 L280 125 L325 140 L370 100 L415 120 L460 75 L505 95 L550 50 L595 65 L635 40 V245 H55 Z"/>
+                                <path fill="none" stroke="url(#sample-line-gradient)" stroke-width="4"
+                                      stroke-linecap="round" stroke-linejoin="round"
+                                      d="M55 215 L100 195 L145 205 L190 155 L235 170 L280 125 L325 140 L370 100 L415 120 L460 75 L505 95 L550 50 L595 65 L635 40"/>
+                                <g class="chart-labels">
+                                    <text x="7" y="49">High</text>
+                                    <text x="7" y="149">Ref.</text>
+                                    <text x="7" y="249">Low</text>
+                                    <text x="55" y="274">Earlier</text>
+                                    <text x="570" y="274">Later</text>
+                                </g>
+                            </svg>
+                            <figcaption>Planned: metric values over time, with reference-relative color.</figcaption>
+                        </figure>
+                        <div class="color-legend" aria-label="Proposed color scale">
+                            <span>Below reference</span><span class="legend-gradient"></span><span>Above reference</span>
+                        </div>
+                    </section>
+
+                    <section class="card-panel timeline-panel" aria-labelledby="timeline-heading">
+                        <div class="panel-heading">
+                            <div>
+                                <p class="eyebrow">Explore the window</p>
+                                <h3 id="timeline-heading">Time range &amp; daily rhythm</h3>
+                            </div>
+                            <span class="preview-badge">Preview controls</span>
+                        </div>
+                        <fieldset disabled aria-describedby="timeline-preview-note">
+                            <legend class="visually-hidden">Planned date range controls</legend>
+                            <div class="date-controls">
+                                <label>Start date<input type="date"></label>
+                                <label>End date<input type="date"></label>
+                            </div>
+                            <div class="range-controls">
+                                <label>Range start<input type="range" min="0" max="100" value="15"></label>
+                                <label>Range end<input type="range" min="0" max="100" value="85"></label>
+                            </div>
+                        </fieldset>
+                        <div class="calendar-preview" aria-hidden="true">
+                            {% for tone in ["none", "cool", "cool", "neutral", "warm", "hot", "none",
+                                            "cool", "neutral", "warm", "neutral", "hot", "warm", "cool",
+                                            "neutral", "warm", "none", "hot", "warm", "hot", "neutral",
+                                            "cool", "none", "warm", "warm", "hot", "neutral", "hot"] %}
+                            <span class="calendar-cell tone-{{ tone }}"></span>
+                            {% endfor %}
+                        </div>
+                        <p class="metric-note" id="timeline-preview-note">
+                            Sample heatmap, not calendar data. Planned: one dual-handle slider
+                            and daily colors using the same fixed reference as the chart.
+                            Gray will mean no data.
+                        </p>
+                    </section>
+                </div>
+            </div>
         </div>
     </dialog>
 </body>

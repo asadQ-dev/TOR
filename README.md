@@ -84,8 +84,11 @@ and wait for the prompt before restarting. Python edits reload automatically;
 refresh the browser for HTML/CSS/JavaScript edits (hard-refresh if assets are cached).
 
 Click a player name to open a modal with TOR and contact metrics fetched from
-`GET /api/player/{player_name}`. The initial card is functional; the four-section
-layout, identity images, metric tabs, and date-filtered trends are not implemented yet.
+`GET /api/player/{player_name}`. A preliminary four-section card shows identity
+placeholders, live contact metrics, an illustrative trend chart, and disabled
+date-control/heatmap previews. The sample chart and colors are identical for every
+player and are not statistical results. Real images, configurable metric tables,
+date-filtered trends, and reference-relative coloring are not connected yet.
 The endpoint currently returns an error object with HTTP 200 for unknown names,
 uses zero for missing measurements, and calculates hard-hit rate over all positive
 recorded exit velocities rather than only balls in play. These behaviors need

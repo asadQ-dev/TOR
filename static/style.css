@@ -392,24 +392,6 @@ body:has(#player-dialog[open]) {
     accent-color: #91bce7;
 }
 
-.calendar-preview {
-    display: grid;
-    grid-template-columns: repeat(14, minmax(0, 1fr));
-    gap: 5px;
-    margin: 1rem 0;
-}
-
-.calendar-cell {
-    height: 12px;
-    border-radius: 3px;
-}
-
-.tone-none { background: #364254; }
-.tone-cool { background: #518cc2; }
-.tone-neutral { background: #a7b5c8; }
-.tone-warm { background: #d39c95; }
-.tone-hot { background: #e77570; }
-
 .visually-hidden {
     position: absolute;
     width: 1px;

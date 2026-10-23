@@ -3,3 +3,4 @@ __pycache__/
 .env
 statcast_data/*.csv
 /.WORKFLOW/
+/scratch/frontend/

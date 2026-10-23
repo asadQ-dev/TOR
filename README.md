@@ -85,8 +85,8 @@ refresh the browser for HTML/CSS/JavaScript edits (hard-refresh if assets are ca
 
 Click a player name to open a modal with TOR and contact metrics fetched from
 `GET /api/player/{player_name}`. A preliminary four-section card shows identity
-placeholders, live contact metrics, an illustrative trend chart, and disabled
-date-control/heatmap previews. The sample chart and colors are identical for every
+placeholders, live contact metrics, an illustrative trend chart, disabled
+date controls, and a low-to-high gradient legend. The sample chart and colors are identical for every
 player and are not statistical results. Real images, configurable metric tables,
 date-filtered trends, and reference-relative coloring are not connected yet.
 The endpoint currently returns an error object with HTTP 200 for unknown names,

@@ -179,7 +179,7 @@
                         <div class="panel-heading">
                             <div>
                                 <p class="eyebrow">Explore the window</p>
-                                <h3 id="timeline-heading">Time range &amp; daily rhythm</h3>
+                                <h3 id="timeline-heading">Time range</h3>
                             </div>
                             <span class="preview-badge">Preview controls</span>
                         </div>
@@ -194,18 +194,12 @@
                                 <label>Range end<input type="range" min="0" max="100" value="85"></label>
                             </div>
                         </fieldset>
-                        <div class="calendar-preview" aria-hidden="true">
-                            {% for tone in ["none", "cool", "cool", "neutral", "warm", "hot", "none",
-                                            "cool", "neutral", "warm", "neutral", "hot", "warm", "cool",
-                                            "neutral", "warm", "none", "hot", "warm", "hot", "neutral",
-                                            "cool", "none", "warm", "warm", "hot", "neutral", "hot"] %}
-                            <span class="calendar-cell tone-{{ tone }}"></span>
-                            {% endfor %}
+                        <div class="color-legend" aria-label="Preview color legend: blue is low, red is high">
+                            <span>Low / blue</span><span class="legend-gradient"></span><span>High / red</span>
                         </div>
                         <p class="metric-note" id="timeline-preview-note">
-                            Sample heatmap, not calendar data. Planned: one dual-handle slider
-                            and daily colors using the same fixed reference as the chart.
-                            Gray will mean no data.
+                            Preview legend only; statistical colors are not calculated yet.
+                            Planned: one dual-handle slider and date inputs that update the chart.
                         </p>
                     </section>
                 </div>

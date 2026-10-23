@@ -4,6 +4,51 @@
 
 ---
 
+## Development Status
+
+**As of October 23, 2026: active development / pre-beta.**
+The project is transitioning from Streamlit to a custom FastAPI + Jinja2 +
+HTML/CSS/JavaScript dashboard. The scoring engine and basic player-card flow work;
+the multi-metric trend analysis and its frontend integration are still being built.
+TOR is an experimental metric; predictive performance has not been established.
+
+### Working now
+- Pitch-level TOR scoring and player rankings.
+- CSV-backed FastAPI leaderboard and player-details JSON endpoint.
+- Clickable player names opening a responsive, blurred-backdrop dialog with
+  API-fetched TOR and contact metrics, plus loading and retry states.
+- Preliminary four-section player-card layout.
+- Standalone trend calculations in [trends.py](./trends.py): inclusive date-range
+  filtering, daily valid-appearance grouping, daily TOR, and qualifying contact EV
+  averages with qualifying/excluded/missing measurement counts.
+- Qualifying trend EV includes recorded fouls and balls in play strictly above
+  the lowest quality-contact scoring threshold (currently 80 mph). It is not an
+  unfiltered or standard balls-in-play-only EV average.
+- Seven saved regression tests for date filtering, grouping, TOR averages/counts,
+  and current window-relative TOR statistics. EV boundary/missing-data behavior
+  has also been checked with temporary examples; dedicated saved EV tests are pending.
+
+### In progress / not connected
+- Trend calculations are **not yet exposed through a trend endpoint or drawn by
+  the chart**. The displayed chart is illustrative, date controls are disabled,
+  and the gradient legend is a design preview, not calculated player coloring.
+- Current trend z-scores are experimental and relative to the selected player's
+  date window, not a fixed league reference. TOR uses PA-weighted daily means;
+  EV compares daily means with qualifying individual measurements. These are
+  different reference distributions, not finalized comparable color scales.
+- Bat-speed trends, EV consistency measures, launch-angle ingestion, and TOR
+  component trends are next. Launch angle exists in the source CSV but is not
+  retained by the current loader or pitch model.
+- Player headshots/team metadata, configurable metric tables, interactive date
+  controls, and additional chart types remain planned.
+- The web server loads the 2026 CSV once at startup. CSV/API source selection
+  exists in the console scripts, not the web startup path; automatic refresh is
+  not implemented.
+- CI/CD is not configured yet. Dependency consolidation and API edge-case review
+  remain pending; the Streamlit implementation is retained as a temporary reference.
+
+---
+
 ## 🎯 Overview & Motivation
 
 In baseball, traditional offensive metrics evaluate plate appearances as terminal events. A hit, an out, a strikeout — each assigned a fixed value determined entirely by result. While this framework has proven analytically useful, it systematically discards the pitch-level process data from which offensive outcomes emerge.
@@ -85,7 +130,7 @@ refresh the browser for HTML/CSS/JavaScript edits (hard-refresh if assets are ca
 
 Click a player name to open a modal with TOR and contact metrics fetched from
 `GET /api/player/{player_name}`. A preliminary four-section card shows identity
-placeholders, live contact metrics, an illustrative trend chart, disabled
+placeholders, API-backed metrics from the startup CSV snapshot, an illustrative trend chart, disabled
 date controls, and a low-to-high gradient legend. The sample chart and colors are identical for every
 player and are not statistical results. Real images, configurable metric tables,
 date-filtered trends, and reference-relative coloring are not connected yet.
@@ -114,6 +159,17 @@ Run the analysis pipeline with:
 python main.py
 ```
 
+### Trend regression tests
+
+From the repository root, run the saved tests without downloading Statcast data:
+
+```bash
+python -B -m unittest discover -s tests -p test_trends.py -v
+```
+
+These use small synthetic examples. They verify calculation behavior, not TOR's
+predictive validity or completed frontend integration.
+
 ---
 
 ## 📂 Project Structure
@@ -121,8 +177,17 @@ python main.py
 ```text
 ├── at_bat.py            # AtBat and Pitch classes (Core Data Model)
 ├── scorer.py            # TOR aggregation and player-level rating logic
+├── trends.py            # Date-filtered daily TOR and qualifying-EV analysis
 ├── fetcher.py           # Statcast pitch-level data ingestion and At-Bat construction
 ├── main.py              # Entry point for running TOR analysis and leaderboard output
+├── server.py            # FastAPI leaderboard and player-details routes
+├── templates/
+│   └── leaderboard.html # Leaderboard and preliminary player-card layout
+├── static/
+│   ├── style.css        # Dashboard styling and responsive dialog layout
+│   └── script.js        # Player-detail requests and dialog interactions
+├── tests/
+│   └── test_trends.py   # Synthetic trend regression tests
 ├── download_data.py     # Statcast data acquisition and local CSV management
 └── statcast_data/       # Local pitch-level data storage (gitignored)
 ```
@@ -132,7 +197,9 @@ python main.py
 ## 🛠️ Tech Stack
 
 * **Language:** Python 3.x
-* **Libraries:** Pandas, PyBaseball, Glob, OS
+* **Backend:** FastAPI, Jinja2, Uvicorn, Pandas, PyBaseball
+* **Frontend:** HTML, CSS, vanilla JavaScript
+* **Data:** Local Statcast CSV snapshot; console API-fetching option
 * **Environment:** Linux or equivalent environment - VS Code / WSL
 
 ---

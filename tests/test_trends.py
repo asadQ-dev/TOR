@@ -22,6 +22,25 @@ class ExampleAtBat:
 
 
 class TrendTests(unittest.TestCase):
+    def test_bat_speed_population_includes_swinging_strikes(self):
+        result = get_trends(
+            [ExampleAtBat(
+                "2026-06-01",
+                70,
+                pitches=[Pitch(1, "swinging_strike", 0, 0, 0, 80)],
+            )],
+            "2026-06-01",
+            "2026-06-01",
+        )
+        self.assertEqual(result[0]["avg_bat_speed"], 80)
+        self.assertEqual(result[0]["qualifying_bat_speed_count"], 1)
+        self.assertEqual(result[0]["excluded_bat_speed_count"], 0)
+        self.assertEqual(result[0]["missing_bat_speed_count"], 0)
+        self.assertIsNone(result[0]["avg_exit_velo"])
+        self.assertEqual(result[0]["qualifying_exit_velo_count"], 0)
+        self.assertEqual(result[0]["excluded_exit_velo_count"], 0)
+        self.assertEqual(result[0]["missing_exit_velo_count"], 0)
+
     def test_date_filter_includes_both_boundaries(self):
         appearances = [
             ExampleAtBat("2026-06-01", 10),
@@ -91,6 +110,12 @@ class TrendTests(unittest.TestCase):
                 "excluded_exit_velo_count": 0,
                 "missing_exit_velo_count": 0,
                 "exit_velo_z_score": None,
+                "tor_z_score": None,
+                "avg_bat_speed": None,
+                "qualifying_bat_speed_count": 0,
+                "excluded_bat_speed_count": 0,
+                "missing_bat_speed_count": 0,
+                "bat_speed_z_score": None,
             }],
         )
 

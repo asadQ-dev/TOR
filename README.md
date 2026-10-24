@@ -21,7 +21,7 @@ TOR addresses this by evaluating what the hitter did across the plate appearance
 
 **Development update — October 2026:** The FastAPI dashboard now includes a ranked
 leaderboard and interactive player cards with contact metrics. Date-filtered TOR
-and qualifying exit-velocity calculations are implemented; expanded metric coverage,
+and qualifying exit-velocity and bat-speed calculations are implemented; expanded metric coverage,
 interactive trend charts, and statistical reference coloring are in progress.
 TOR remains an experimental analytical framework, with predictive validation ahead.
 
@@ -131,7 +131,7 @@ Tests use small synthetic examples and require no Statcast download.
 ```text
 ├── at_bat.py            # AtBat and Pitch classes (Core Data Model)
 ├── scorer.py            # TOR aggregation and player-level rating logic
-├── trends.py            # Date-filtered daily TOR and qualifying-EV analysis
+├── trends.py            # Date-filtered daily TOR, qualifying EV and bat-speed analysis
 ├── fetcher.py           # Statcast pitch-level data ingestion and At-Bat construction
 ├── main.py              # Entry point for running TOR analysis and leaderboard output
 ├── server.py            # FastAPI leaderboard and player-details routes

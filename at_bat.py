@@ -137,7 +137,7 @@ class AtBat:
     def quality_contact_score(self):
         score = 0
         for pitch in self.pitches:
-            if pitch.description in CONTACT_DESCRIPTIONS:
+            if pitch.description in CONTACT_DESCRIPTIONS and pitch.exit_velo:
                 score += _lookup_tier(pitch.exit_velo, QUALITY_CONTACT_TIERS)
         return score
 

@@ -1,6 +1,6 @@
 import math
 
-from at_bat import CONTACT_DESCRIPTIONS, QUALITY_CONTACT_TIERS, BAT_SPEED_TIERS
+from at_bat import BAT_SPEED_DESCRIPTIONS, BAT_SPEED_TIERS, CONTACT_DESCRIPTIONS, QUALITY_CONTACT_TIERS
 from scorer import player_tor
 
 
@@ -40,26 +40,30 @@ def get_trends(player_at_bats, start_date, end_date):
 
         excluded_exit_velo_count = 0
         missing_exit_velo_count = 0
+        excluded_bat_speed_count = 0
+        missing_bat_speed_count = 0
         
         for ab in at_bats:
             for pitch in ab.pitches:
-                if pitch.description not in CONTACT_DESCRIPTIONS:
-                    continue
-                
                 exit_velo = pitch.exit_velo
                 bat_speed = pitch.bat_speed
                 
-                # The loader represents missing exit velocity with zero.
-                if exit_velo is None or not math.isfinite(exit_velo) or exit_velo <= 0:
-                    missing_exit_velo_count += 1
-                elif exit_velo > exit_velo_cutoff:
-                    daily_exit_velos.append(exit_velo)
-                else:
-                    excluded_exit_velo_count += 1
+                # The loader represents missing EV and bat speed with zero.
+                if pitch.description in CONTACT_DESCRIPTIONS:
+                    if exit_velo is None or not math.isfinite(exit_velo) or exit_velo <= 0:
+                        missing_exit_velo_count += 1
+                    elif exit_velo > exit_velo_cutoff:
+                        daily_exit_velos.append(exit_velo)
+                    else:
+                        excluded_exit_velo_count += 1
 
-                if bat_speed is not None and math.isfinite(bat_speed) and bat_speed > bat_speed_cutoff:
-                    daily_bat_speeds.append(bat_speed)
-                    qualifying_bat_speeds.append(bat_speed)
+                if pitch.description in BAT_SPEED_DESCRIPTIONS:
+                    if bat_speed is None or not math.isfinite(bat_speed) or bat_speed <= 0:
+                        missing_bat_speed_count += 1
+                    elif bat_speed > bat_speed_cutoff:
+                        daily_bat_speeds.append(bat_speed)
+                    else:
+                        excluded_bat_speed_count += 1
                     
         qualifying_exit_velos.extend(daily_exit_velos)
         qualifying_bat_speeds.extend(daily_bat_speeds)
@@ -77,8 +81,11 @@ def get_trends(player_at_bats, start_date, end_date):
             "excluded_exit_velo_count": excluded_exit_velo_count,
             "missing_exit_velo_count": missing_exit_velo_count,
             "exit_velo_z_score": None,
+            "tor_z_score": None,
             "avg_bat_speed": daily_avg_bat_speed,
             "qualifying_bat_speed_count": len(daily_bat_speeds),
+            "excluded_bat_speed_count": excluded_bat_speed_count,
+            "missing_bat_speed_count": missing_bat_speed_count,
             "bat_speed_z_score": None,
         })
 
@@ -111,7 +118,9 @@ def get_trends(player_at_bats, start_date, end_date):
         stddev_exit_velo = math.sqrt(variance_exit_velo)
         
         for day in daily_data:
-            if stddev_exit_velo > 0 and day["avg_exit_velo"] is not None:
+            if day["avg_exit_velo"] is None:
+                day["exit_velo_z_score"] = None
+            elif stddev_exit_velo > 0:
                 day["exit_velo_z_score"] = round((day["avg_exit_velo"] - mean_exit_velo) / stddev_exit_velo, 2)
             else:
                 day["exit_velo_z_score"] = 0
@@ -126,7 +135,9 @@ def get_trends(player_at_bats, start_date, end_date):
         stddev_bat_speed = math.sqrt(variance_bat_speed)
         
         for day in daily_data:
-            if stddev_bat_speed > 0 and day["avg_bat_speed"] is not None:
+            if day["avg_bat_speed"] is None:
+                day["bat_speed_z_score"] = None
+            elif stddev_bat_speed > 0:
                 day["bat_speed_z_score"] = round((day["avg_bat_speed"] - mean_bat_speed) / stddev_bat_speed, 2)
             else:
                 day["bat_speed_z_score"] = 0

@@ -19,26 +19,40 @@ TOR addresses this by evaluating what the hitter did across the plate appearance
 * **Contact Sustainability** — whether the underlying contact profile is repeatable
 * **Pitcher Pressure** — the degree to which the hitter imposed competitive difficulty
 
-**Development update — October 2026:** The FastAPI dashboard now includes a ranked
-leaderboard and interactive player cards with contact metrics. Date-filtered TOR
-and qualifying exit-velocity and bat-speed calculations are implemented, along with
-swing/whiff summaries for all offers, explicitly non-bunt offers, and speed-qualified offers.
-Expanded metric coverage,
-interactive trend charts, and statistical reference coloring are in progress.
-TOR remains an experimental analytical framework, with predictive validation ahead.
+---
 
-Trend measurements use pitches from all loaded appearances, independently of TOR
-eligibility. Qualifying bat speed averages and speed-qualified whiff rates use the
-same non-bunt-description swings above 69 mph, including foul tips and blocked
-misses; this does not change TOR scoring. Days without eligible TOR appearances
-retain their measurements but report TOR as `null`. In trend output,
-`plate_appearances` is the TOR-scored count; `total_plate_appearances` includes all
-appearances. Pitch-based rates currently include automatic ball/strike records.
-Hard fouls retain their TOR bonuses even if the appearance later ends in HBP or
-an intentional walk: those appearances count toward TOR when they contain a
-non-bunt-description swing. Without such a swing they remain excluded.
-Bunt attempts receive no contact/bat-speed bonuses but remain in the pitch/count
-sequence; HBP and intentional walks add no terminal-outcome bonus.
+## Development Status
+
+**Updated October 24, 2026.** TOR is an experimental analytical framework.
+The current focus is reliable metric calculation before interactive chart integration
+and later scoring calibration and predictive validation.
+
+* **Working dashboard:** FastAPI/Jinja2 leaderboard and interactive player cards
+  with CSV-backed summary metrics. The trend chart and color legend are illustrative;
+  metric and date controls are not yet connected to the trend backend.
+* **Implemented trend backend:** Date-filtered daily TOR, qualifying exit velocity
+  and bat speed, and swing/whiff counts and rates for all offers, explicitly
+  non-bunt offers, and speed-qualified offers.
+* **Scoring checkpoint:** Hard-foul bonuses survive a later HBP or intentional walk.
+  These appearances count toward TOR when they contain a non-bunt-description swing;
+  otherwise they remain excluded. Explicit bunt attempts earn no contact/bat-speed
+  bonuses but remain in the pitch/count sequence. HBP/IBB adds no outcome bonus.
+* **Validation and next steps:** 18 scoring/trend regression tests pass, including
+  called-strike-only strikeout eligibility and scoring. Expanded
+  metrics, real trend charts, date-range interaction, and statistical reference
+  coloring remain in development.
+
+**Metric scope:** Descriptive trends use all loaded appearances independently of
+TOR eligibility. Bat-speed averages and speed-qualified whiff rates share the
+same finite, measured, above-69-mph non-bunt-description swing population, including
+foul tips and blocked misses; TOR's bat-speed scoring categories remain narrower.
+Speed and descriptions are proxies, not definitive indicators of swing intent.
+Trend z-scores are relative to the selected window, not a league benchmark.
+
+Days without eligible TOR appearances retain their measurements and report TOR
+as `null`. In trend output, `plate_appearances` is the TOR-scored count;
+`total_plate_appearances` includes all appearances. Pitch-based rates currently
+include automatic ball/strike records.
 
 ---
 

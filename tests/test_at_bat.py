@@ -74,3 +74,41 @@ class AtBatTests(unittest.TestCase):
 
         self.assertEqual(player_tor([scored, hbp]), scored.calculate_tor())
         self.assertEqual(rank_players([scored, hbp], min_pas=2), [])
+
+    def test_strikeout_looking_remains_valid_and_scored_correctly(self):
+        ab = AtBat("Example", "strikeout", "2026-06-01")
+        ab.add_pitch(Pitch(1, "called_strike", 0, 0, 0, 0))
+        ab.add_pitch(Pitch(2, "called_strike", 0, 1, 0, 0))
+        ab.add_pitch(Pitch(3, "called_strike", 0, 2, 0, 0))
+
+        self.assertTrue(ab.is_valid_ab())
+        self.assertEqual(ab.outcome_score(), -1)
+        self.assertEqual(ab.quality_contact_score(), 0)
+        self.assertEqual(ab.bat_speed_score(), 0)
+        expected = (
+            50
+            + ab.pitch_count_score() * SCORE_WEIGHTS["pitch_count"]
+            + ab.count_management_score() * SCORE_WEIGHTS["count_management"]
+            + (-1) * SCORE_WEIGHTS["outcome"]
+        )
+        self.assertAlmostEqual(ab.calculate_tor(), expected)
+        self.assertAlmostEqual(player_tor([ab]), expected)
+        self.assertEqual(rank_players([ab], min_pas=1), [("Example", expected)])
+
+        day = get_trends([ab], "2026-06-01", "2026-06-01")[0]
+        self.assertAlmostEqual(day["tor"], expected)
+        self.assertEqual(day["plate_appearances"], 1)
+        self.assertEqual(day["total_plate_appearances"], 1)
+        self.assertEqual(day["pitch_count"], 3)
+        self.assertEqual(day["swing_count"], 0)
+        self.assertEqual(day["whiff_count"], 0)
+        self.assertEqual(day["swing_rate"], 0)
+        self.assertEqual(day["swstr_rate"], 0)
+        self.assertIsNone(day["whiff_rate"])
+        self.assertIsNone(day["nonbunt_whiff_rate"])
+        self.assertIsNone(day["speedq_whiff_rate"])
+        self.assertEqual(day["nonbunt_swing_count"], 0)
+        self.assertEqual(day["nonbunt_whiff_count"], 0)
+        self.assertEqual(day["bunt_swing_count"], 0)
+        self.assertEqual(day["speedq_swing_count"], 0)
+        self.assertEqual(day["speedq_whiff_count"], 0)

@@ -1,14 +1,20 @@
 import math
 
-from at_bat import BAT_SPEED_DESCRIPTIONS, BAT_SPEED_TIERS, CONTACT_DESCRIPTIONS, QUALITY_CONTACT_TIERS
+from at_bat import (
+    BAT_SPEED_TIERS,
+    BUNT_SWING_DESCRIPTIONS,
+    CONTACT_DESCRIPTIONS,
+    QUALITY_CONTACT_TIERS,
+    SWING_DESCRIPTIONS,
+    WHIFF_DESCRIPTIONS,
+)
 from scorer import player_tor
 
 
 def group_by_date(player_at_bats):
+    """Group all appearances; each metric applies its own eligibility rules."""
     ab_by_date = {}
     for ab in player_at_bats:
-        if not ab.is_valid_ab():
-            continue
         game_date = ab.game_date
         if game_date not in ab_by_date:
             ab_by_date[game_date] = []
@@ -35,8 +41,17 @@ def get_trends(player_at_bats, start_date, end_date):
     bat_speed_cutoff = min(threshold for threshold, _ in BAT_SPEED_TIERS)
 
     for game_date, at_bats in sorted(ab_by_date.items()):
+        scored_at_bats = [ab for ab in at_bats if ab.is_valid_ab()]
         daily_exit_velos = []
         daily_bat_speeds = []
+        daily_pitches = 0
+        daily_swings = 0
+        daily_nonbunt_swings = 0
+        daily_nonbunt_whiffs = 0
+        daily_speedq_swings = 0
+        daily_speedq_whiffs = 0
+        daily_whiffs = 0
+        daily_bunt_swings = 0
 
         excluded_exit_velo_count = 0
         missing_exit_velo_count = 0
@@ -47,8 +62,32 @@ def get_trends(player_at_bats, start_date, end_date):
             for pitch in ab.pitches:
                 exit_velo = pitch.exit_velo
                 bat_speed = pitch.bat_speed
-                
-                # The loader represents missing EV and bat speed with zero.
+                daily_pitches += 1
+                if pitch.description in SWING_DESCRIPTIONS:
+                    daily_swings += 1
+                    is_whiff = pitch.description in WHIFF_DESCRIPTIONS
+                    if is_whiff:
+                        daily_whiffs += 1
+
+                    if pitch.description in BUNT_SWING_DESCRIPTIONS:
+                        daily_bunt_swings += 1
+                    else:
+                        daily_nonbunt_swings += 1
+                        if is_whiff:
+                            daily_nonbunt_whiffs += 1
+
+                        # Average speed and speed-qualified whiffs use the same swings.
+                        if bat_speed is None or not math.isfinite(bat_speed) or bat_speed <= 0:
+                            missing_bat_speed_count += 1
+                        elif bat_speed > bat_speed_cutoff:
+                            daily_bat_speeds.append(bat_speed)
+                            daily_speedq_swings += 1
+                            if is_whiff:
+                                daily_speedq_whiffs += 1
+                        else:
+                            excluded_bat_speed_count += 1
+
+                # The loader represents missing measurements with zero.
                 if pitch.description in CONTACT_DESCRIPTIONS:
                     if exit_velo is None or not math.isfinite(exit_velo) or exit_velo <= 0:
                         missing_exit_velo_count += 1
@@ -57,14 +96,6 @@ def get_trends(player_at_bats, start_date, end_date):
                     else:
                         excluded_exit_velo_count += 1
 
-                if pitch.description in BAT_SPEED_DESCRIPTIONS:
-                    if bat_speed is None or not math.isfinite(bat_speed) or bat_speed <= 0:
-                        missing_bat_speed_count += 1
-                    elif bat_speed > bat_speed_cutoff:
-                        daily_bat_speeds.append(bat_speed)
-                    else:
-                        excluded_bat_speed_count += 1
-                    
         qualifying_exit_velos.extend(daily_exit_velos)
         qualifying_bat_speeds.extend(daily_bat_speeds)
         
@@ -74,8 +105,10 @@ def get_trends(player_at_bats, start_date, end_date):
 
         daily_data.append({
             "date": game_date,
-            "tor": player_tor(at_bats),
-            "plate_appearances": len(at_bats),
+            "tor": player_tor(scored_at_bats) if scored_at_bats else None,
+            # Retained as the TOR weight; total appearances also include HBP/IBB.
+            "plate_appearances": len(scored_at_bats),
+            "total_plate_appearances": len(at_bats),
             "avg_exit_velo": daily_avg_exit_velo,
             "qualifying_exit_velo_count": len(daily_exit_velos),
             "excluded_exit_velo_count": excluded_exit_velo_count,
@@ -87,22 +120,36 @@ def get_trends(player_at_bats, start_date, end_date):
             "excluded_bat_speed_count": excluded_bat_speed_count,
             "missing_bat_speed_count": missing_bat_speed_count,
             "bat_speed_z_score": None,
+            "pitch_count": daily_pitches,
+            "swing_count": daily_swings,
+            "whiff_count": daily_whiffs,
+            "bunt_swing_count": daily_bunt_swings,
+            "nonbunt_swing_count": daily_nonbunt_swings,
+            "nonbunt_whiff_count": daily_nonbunt_whiffs,
+            "speedq_swing_count": daily_speedq_swings,
+            "speedq_whiff_count": daily_speedq_whiffs,
+            "swing_rate": daily_swings / daily_pitches if daily_pitches else None,
+            "whiff_rate": daily_whiffs / daily_swings if daily_swings else None,
+            "swstr_rate": daily_whiffs / daily_pitches if daily_pitches else None,
+            "nonbunt_whiff_rate": daily_nonbunt_whiffs / daily_nonbunt_swings if daily_nonbunt_swings else None,
+            "speedq_whiff_rate": daily_speedq_whiffs / daily_speedq_swings if daily_speedq_swings else None,
         })
 
     # Window-relative variation of daily means, not a league or per-PA reference.
-    total_pas = sum(day["plate_appearances"] for day in daily_data)
+    scored_days = [day for day in daily_data if day["plate_appearances"] > 0]
+    total_pas = sum(day["plate_appearances"] for day in scored_days)
     if total_pas > 1:
-        weighted_tor_sum = sum(day["tor"] * day["plate_appearances"] for day in daily_data)
+        weighted_tor_sum = sum(day["tor"] * day["plate_appearances"] for day in scored_days)
         mean_tor = weighted_tor_sum / total_pas
 
         weighted_variance_tor = sum(
             day["plate_appearances"] * (day["tor"] - mean_tor) ** 2
-            for day in daily_data
+            for day in scored_days
         ) / total_pas
 
         stddev_tor = math.sqrt(weighted_variance_tor)
 
-        for day in daily_data:
+        for day in scored_days:
             if stddev_tor > 0:
                 day["tor_z_score"] = round((day["tor"] - mean_tor) / stddev_tor, 2)
             else:

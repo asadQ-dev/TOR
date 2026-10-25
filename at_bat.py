@@ -24,7 +24,7 @@ SCORE_WEIGHTS = {
     "outcome":          2,
 }
 
-INVALID_OUTCOMES = ["hit_by_pitch", "intentional_walk"]
+SWING_REQUIRED_OUTCOMES = ("hit_by_pitch", "intentional_walk")
 
 # Pitch descriptions that count as "contact" for each sub-score.
 CONTACT_DESCRIPTIONS = ("foul", "hit_into_play")
@@ -67,6 +67,35 @@ BAT_SPEED_TIERS = [
     (69,  1),
 ]
 
+# Pitch descriptions where batter offered at the pitch
+SWING_DESCRIPTIONS = (
+    "swinging_strike",
+    "swinging_strike_blocked",
+    "missed_bunt",
+    "foul",
+    "foul_tip",
+    "foul_bunt",
+    "bunt_foul_tip",
+    "hit_into_play",
+    "hit_into_play_no_out",
+    "hit_into_play_score",
+)
+
+# Subset of swings where the bat missed entirely
+WHIFF_DESCRIPTIONS = (
+    "swinging_strike",
+    "swinging_strike_blocked",
+    "missed_bunt",
+)
+
+# Explicit bunt-attempt descriptions; in-play bunts can have generic descriptions.
+BUNT_SWING_DESCRIPTIONS = (
+    "foul_bunt",
+    "missed_bunt",
+    "bunt_foul_tip",
+)
+
+
 # How much of the bat-speed base score counts, depending on what happened to the pitch.
 BAT_SPEED_CONTACT_MULTIPLIER = {
     "hit_into_play":   1.0,
@@ -104,10 +133,14 @@ class AtBat:
         self.pitches.append(pitch)
 
     def is_valid_ab(self):
-        if self.final_outcome in INVALID_OUTCOMES:
-            return False
         if len(self.pitches) == 0:
             return False
+        if self.final_outcome in SWING_REQUIRED_OUTCOMES:
+            return any(
+                pitch.description in SWING_DESCRIPTIONS
+                and pitch.description not in BUNT_SWING_DESCRIPTIONS
+                for pitch in self.pitches
+            )
         return True
 
     def pitch_count_score(self):

@@ -21,9 +21,24 @@ TOR addresses this by evaluating what the hitter did across the plate appearance
 
 **Development update — October 2026:** The FastAPI dashboard now includes a ranked
 leaderboard and interactive player cards with contact metrics. Date-filtered TOR
-and qualifying exit-velocity and bat-speed calculations are implemented; expanded metric coverage,
+and qualifying exit-velocity and bat-speed calculations are implemented, along with
+swing/whiff summaries for all offers, explicitly non-bunt offers, and speed-qualified offers.
+Expanded metric coverage,
 interactive trend charts, and statistical reference coloring are in progress.
 TOR remains an experimental analytical framework, with predictive validation ahead.
+
+Trend measurements use pitches from all loaded appearances, independently of TOR
+eligibility. Qualifying bat speed averages and speed-qualified whiff rates use the
+same non-bunt-description swings above 69 mph, including foul tips and blocked
+misses; this does not change TOR scoring. Days without eligible TOR appearances
+retain their measurements but report TOR as `null`. In trend output,
+`plate_appearances` is the TOR-scored count; `total_plate_appearances` includes all
+appearances. Pitch-based rates currently include automatic ball/strike records.
+Hard fouls retain their TOR bonuses even if the appearance later ends in HBP or
+an intentional walk: those appearances count toward TOR when they contain a
+non-bunt-description swing. Without such a swing they remain excluded.
+Bunt attempts receive no contact/bat-speed bonuses but remain in the pitch/count
+sequence; HBP and intentional walks add no terminal-outcome bonus.
 
 ---
 
@@ -114,12 +129,12 @@ Run the analysis pipeline with:
 python main.py
 ```
 
-### Trend regression tests
+### Scoring and trend regression tests
 
 From the repository root, run the saved tests without downloading Statcast data:
 
 ```bash
-python -B -m unittest discover -s tests -p test_trends.py -v
+python -B -m unittest discover -s tests -p 'test*.py' -v
 ```
 
 Tests use small synthetic examples and require no Statcast download.
@@ -141,6 +156,7 @@ Tests use small synthetic examples and require no Statcast download.
 │   ├── style.css        # Dashboard styling and responsive dialog layout
 │   └── script.js        # Player-detail requests and dialog interactions
 ├── tests/
+│   ├── test_at_bat.py   # Scoring eligibility and foul-credit regression tests
 │   └── test_trends.py   # Synthetic trend regression tests
 ├── download_data.py     # Statcast data acquisition and local CSV management
 └── statcast_data/       # Local pitch-level data storage (gitignored)

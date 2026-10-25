@@ -32,13 +32,15 @@ and later scoring calibration and predictive validation.
   metric and date controls are not yet connected to the trend backend.
 * **Implemented trend backend:** Date-filtered daily TOR, qualifying exit velocity
   and bat speed, and swing/whiff counts and rates for all offers, explicitly
-  non-bunt offers, and speed-qualified offers.
+  non-bunt offers, and speed-qualified offers. Cumulative power-contact rates
+  include fouls: hard (EV >=95 mph), very hard (>105), and elite (>115).
 * **Scoring checkpoint:** Hard-foul bonuses survive a later HBP or intentional walk.
   These appearances count toward TOR when they contain a non-bunt-description swing;
   otherwise they remain excluded. Explicit bunt attempts earn no contact/bat-speed
   bonuses but remain in the pitch/count sequence. HBP/IBB adds no outcome bonus.
-* **Validation and next steps:** 18 scoring/trend regression tests pass, including
-  called-strike-only strikeout eligibility and scoring. Expanded
+* **Validation and next steps:** Scoring/trend regression tests cover
+  called-strike-only strikeout eligibility, power thresholds, and HBP/IBB foul
+  preservation. Expanded
   metrics, real trend charts, date-range interaction, and statistical reference
   coloring remain in development.
 
@@ -47,6 +49,12 @@ TOR eligibility. Bat-speed averages and speed-qualified whiff rates share the
 same finite, measured, above-69-mph non-bunt-description swing population, including
 foul tips and blocked misses; TOR's bat-speed scoring categories remain narrower.
 Speed and descriptions are proxies, not definitive indicators of swing intent.
+Power-rate denominators contain non-bunt-description contact with finite bat speed
+above 69 mph and finite positive EV, including EV at or below 80 mph. Missing EV
+is counted separately, not treated as weak contact; zero measured eligible contacts
+produces a `null` rate. Existing qualifying EV averages still use foul/in-play EV
+above 80 mph independently of bat speed. TOR now gives blocked swinging strikes
+the same reduced bat-speed bonus as ordinary misses.
 Trend z-scores are relative to the selected window, not a league benchmark.
 
 Days without eligible TOR appearances retain their measurements and report TOR

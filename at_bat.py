@@ -28,7 +28,6 @@ SWING_REQUIRED_OUTCOMES = ("hit_by_pitch", "intentional_walk")
 
 # Pitch descriptions that count as "contact" for each sub-score.
 CONTACT_DESCRIPTIONS = ("foul", "hit_into_play")
-BAT_SPEED_DESCRIPTIONS = ("foul", "hit_into_play", "swinging_strike")
 
 # (minimum pitch count, score) tiers, checked in order from most to least pitches.
 PITCH_COUNT_TIERS = [
@@ -95,12 +94,19 @@ BUNT_SWING_DESCRIPTIONS = (
     "bunt_foul_tip",
 )
 
+BAT_SPEED_DESCRIPTIONS = (
+    "foul",
+    "hit_into_play",
+    "swinging_strike",
+    "swinging_strike_blocked",
+)
 
 # How much of the bat-speed base score counts, depending on what happened to the pitch.
 BAT_SPEED_CONTACT_MULTIPLIER = {
     "hit_into_play":   1.0,
     "foul":            0.6,
     "swinging_strike": 0.1,
+    "swinging_strike_blocked": 0.1,
 }
 
 OUTCOME_SCORES = {

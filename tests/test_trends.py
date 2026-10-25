@@ -155,6 +155,14 @@ class TrendTests(unittest.TestCase):
                 "qualifying_exit_velo_count": 0,
                 "excluded_exit_velo_count": 0,
                 "missing_exit_velo_count": 0,
+                "contact_exit_velo_count": 0,
+                "hard_exit_velo_count": 0,
+                "very_hard_exit_velo_count": 0,
+                "elite_exit_velo_count": 0,
+                "missing_power_exit_velo_count": 0,
+                "hard_contact_rate": None,
+                "very_hard_contact_rate": None,
+                "elite_contact_rate": None,
                 "exit_velo_z_score": None,
                 "tor_z_score": None,
                 "avg_bat_speed": None,
@@ -175,6 +183,10 @@ class TrendTests(unittest.TestCase):
                 "swstr_rate": None,
                 "nonbunt_whiff_rate": None,
                 "speedq_whiff_rate": None,
+                "contact_exit_velo_count": 0,
+                "hard_exit_velo_count": 0,
+                "very_hard_exit_velo_count": 0,
+                "elite_exit_velo_count": 0
             }],
         )
 
@@ -290,3 +302,109 @@ class TrendTests(unittest.TestCase):
         self.assertEqual(result[0]["swstr_rate"], 1 / 5)
         self.assertEqual(result[0]["nonbunt_whiff_rate"], 0)
         self.assertEqual(result[0]["speedq_whiff_rate"], 0)
+
+    def test_hard_contact_tiers_count_cumulatively(self):
+        result = get_trends(
+            [ExampleAtBat("2026-06-01", 70, pitches=[
+                Pitch(1, "hit_into_play", 0, 0, 117, 80),
+                Pitch(2, "foul",          0, 0, 108, 80),
+                Pitch(3, "hit_into_play", 0, 0,  97, 80),
+                Pitch(4, "hit_into_play", 0, 0,  70, 80),
+                Pitch(5, "foul_bunt",     0, 0, 120, 80),
+                Pitch(6, "hit_into_play", 0, 0,   0, 80),
+            ])],
+            "2026-06-01","2026-06-01"
+        )[0]
+        self.assertEqual(result["contact_exit_velo_count"], 4)
+        self.assertEqual(result["hard_exit_velo_count"], 3)
+        self.assertEqual(result["very_hard_exit_velo_count"], 2)
+        self.assertEqual(result["elite_exit_velo_count"], 1)
+        self.assertEqual(result["hard_contact_rate"], 3 / 4)
+        self.assertEqual(result["very_hard_contact_rate"], 2 / 4)
+        self.assertEqual(result["elite_contact_rate"], 1 / 4)
+        self.assertEqual(result["missing_power_exit_velo_count"], 1)
+        self.assertEqual(result["qualifying_exit_velo_count"], 3)
+        self.assertEqual(result["excluded_exit_velo_count"], 1)
+        self.assertAlmostEqual(result["avg_exit_velo"], (117 + 108 + 97) / 3)
+
+    def test_contact_tier_boundaries_match_chart_definition(self):
+        for ev, counts in (
+            (94.99, (0, 0, 0)),
+            (95, (1, 0, 0)),
+            (105, (1, 0, 0)),
+            (105.01, (1, 1, 0)),
+            (115, (1, 1, 0)),
+            (115.01, (1, 1, 1)),
+        ):
+            with self.subTest(exit_velo=ev):
+                day = get_trends(
+                    [ExampleAtBat("2026-06-01", 70, pitches=[
+                        Pitch(1, "foul", 0, 0, ev, 80),
+                    ])],
+                    "2026-06-01", "2026-06-01",
+                )[0]
+                self.assertEqual(day["contact_exit_velo_count"], 1)
+                for key, expected in zip(
+                    ("hard_exit_velo_count", "very_hard_exit_velo_count", "elite_exit_velo_count"),
+                    counts,
+                ):
+                    self.assertEqual(day[key], expected)
+
+    def test_hard_contact_swings_survive_hbp_or_intentional_walk(self):
+        for outcome in ["hit_by_pitch", "intentional_walk"]:
+            with self.subTest(outcome=outcome):
+                ab = AtBat("Example", outcome, "2026-06-01")
+                ab.add_pitch(Pitch(1, "foul_bunt", 0, 0, 121, 100))
+                ab.add_pitch(Pitch(2, "foul_bunt", 0, 1,  90, 100))
+                ab.add_pitch(Pitch(3, "foul",      0, 2,  98,  84))
+                ab.add_pitch(Pitch(4, "foul",      0, 2, 119,  90))
+                ab.add_pitch(Pitch(5, outcome,     0, 2,   0,   0))
+                self.assertTrue(ab.is_valid_ab())
+                day = get_trends([ab], "2026-06-01", "2026-06-01")[0]
+                self.assertEqual(day["contact_exit_velo_count"], 2)
+                self.assertEqual(day["hard_exit_velo_count"], 2)
+                self.assertEqual(day["very_hard_exit_velo_count"], 1)
+                self.assertEqual(day["elite_exit_velo_count"], 1)
+                self.assertEqual(day["hard_contact_rate"], 1)
+                self.assertEqual(day["very_hard_contact_rate"], 0.5)
+                self.assertEqual(day["elite_contact_rate"], 0.5)
+                self.assertEqual(day["avg_exit_velo"], (98 + 119) / 2)
+
+    def test_power_population_requires_contact_speed_and_measured_ev(self):
+        for description, speed, ev, eligible in (
+            ("foul", 69, 120, False),
+            ("foul", 69.01, 120, True),
+            ("foul", None, 120, False),
+            ("foul", math.inf, 120, False),
+            ("foul", math.nan, 120, False),
+            ("foul", 30, 120, False),
+            ("foul", 80, None, False),
+            ("foul", 80, 0, False),
+            ("foul", 80, -1, False),
+            ("foul", 80, math.nan, False),
+            ("foul", 80, math.inf, False),
+            ("foul_tip", 80, 120, True),
+            ("hit_into_play_no_out", 80, 120, True),
+            ("hit_into_play_score", 80, 120, True),
+            ("swinging_strike", 80, 120, False),
+            ("swinging_strike_blocked", 80, 120, False),
+            ("foul_bunt", 80, 120, False),
+            ("bunt_foul_tip", 80, 120, False),
+            ("missed_bunt", 80, 120, False),
+            ("ball", 80, 120, False),
+        ):
+            with self.subTest(description=description, speed=speed, ev=ev):
+                day = get_trends(
+                    [ExampleAtBat("2026-06-01", 70, pitches=[
+                        Pitch(1, description, 0, 0, ev, speed),
+                    ])],
+                    "2026-06-01", "2026-06-01",
+                )[0]
+                self.assertEqual(day["contact_exit_velo_count"], int(eligible))
+                self.assertEqual(day["hard_exit_velo_count"], int(eligible))
+                if eligible:
+                    self.assertEqual(day["hard_contact_rate"], 1)
+                else:
+                    self.assertIsNone(day["hard_contact_rate"])
+                    self.assertIsNone(day["very_hard_contact_rate"])
+                    self.assertIsNone(day["elite_contact_rate"])

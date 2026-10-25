@@ -6,6 +6,18 @@ from trends import get_trends
 
 
 class AtBatTests(unittest.TestCase):
+    def test_blocked_and_ordinary_misses_receive_equal_bat_speed_credit(self):
+        for speed, expected in ((30, 0), (69, 0), (69.01, 0.1), (80, 0.8)):
+            with self.subTest(bat_speed=speed):
+                scores = []
+                for description in ("swinging_strike", "swinging_strike_blocked"):
+                    ab = AtBat("Example", "strikeout", "2026-06-01")
+                    ab.add_pitch(Pitch(1, description, 0, 2, 0, speed))
+                    self.assertAlmostEqual(ab.bat_speed_score(), expected)
+                    self.assertEqual(ab.quality_contact_score(), 0)
+                    scores.append(ab.calculate_tor())
+                self.assertEqual(scores[0], scores[1])
+
     def test_hard_foul_after_bunts_survives_hbp_or_intentional_walk(self):
         for outcome in ("hit_by_pitch", "intentional_walk"):
             with self.subTest(outcome=outcome):

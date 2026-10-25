@@ -39,6 +39,9 @@ def get_trends(player_at_bats, start_date, end_date):
 
     exit_velo_cutoff = min(threshold for threshold, _ in QUALITY_CONTACT_TIERS)
     bat_speed_cutoff = min(threshold for threshold, _ in BAT_SPEED_TIERS)
+    hard_exit_velo_cutoff = 95
+    very_hard_exit_velo_cutoff = 105
+    elite_exit_velo_cutoff = 115
 
     for game_date, at_bats in sorted(ab_by_date.items()):
         scored_at_bats = [ab for ab in at_bats if ab.is_valid_ab()]
@@ -52,6 +55,11 @@ def get_trends(player_at_bats, start_date, end_date):
         daily_speedq_whiffs = 0
         daily_whiffs = 0
         daily_bunt_swings = 0
+        daily_contact_ev = 0
+        daily_hard = 0
+        daily_vhard = 0
+        daily_elite = 0
+        missing_power_exit_velo_count = 0
 
         excluded_exit_velo_count = 0
         missing_exit_velo_count = 0
@@ -96,6 +104,26 @@ def get_trends(player_at_bats, start_date, end_date):
                     else:
                         excluded_exit_velo_count += 1
 
+                # Power rates include weak measured contact, but not misses or bunts.
+                if (
+                    pitch.description in SWING_DESCRIPTIONS
+                    and pitch.description not in WHIFF_DESCRIPTIONS
+                    and pitch.description not in BUNT_SWING_DESCRIPTIONS
+                    and bat_speed is not None
+                    and math.isfinite(bat_speed)
+                    and bat_speed > bat_speed_cutoff
+                ):
+                    if exit_velo is None or not math.isfinite(exit_velo) or exit_velo <= 0:
+                        missing_power_exit_velo_count += 1
+                    else:
+                        daily_contact_ev += 1
+                        if exit_velo >= hard_exit_velo_cutoff:
+                            daily_hard += 1
+                        if exit_velo > very_hard_exit_velo_cutoff:
+                            daily_vhard += 1
+                        if exit_velo > elite_exit_velo_cutoff:
+                            daily_elite += 1
+
         qualifying_exit_velos.extend(daily_exit_velos)
         qualifying_bat_speeds.extend(daily_bat_speeds)
         
@@ -113,6 +141,11 @@ def get_trends(player_at_bats, start_date, end_date):
             "qualifying_exit_velo_count": len(daily_exit_velos),
             "excluded_exit_velo_count": excluded_exit_velo_count,
             "missing_exit_velo_count": missing_exit_velo_count,
+            "contact_exit_velo_count": daily_contact_ev,
+            "hard_exit_velo_count": daily_hard,
+            "very_hard_exit_velo_count": daily_vhard,
+            "elite_exit_velo_count": daily_elite,
+            "missing_power_exit_velo_count": missing_power_exit_velo_count,
             "exit_velo_z_score": None,
             "tor_z_score": None,
             "avg_bat_speed": daily_avg_bat_speed,
@@ -133,6 +166,9 @@ def get_trends(player_at_bats, start_date, end_date):
             "swstr_rate": daily_whiffs / daily_pitches if daily_pitches else None,
             "nonbunt_whiff_rate": daily_nonbunt_whiffs / daily_nonbunt_swings if daily_nonbunt_swings else None,
             "speedq_whiff_rate": daily_speedq_whiffs / daily_speedq_swings if daily_speedq_swings else None,
+            "hard_contact_rate": daily_hard / daily_contact_ev if daily_contact_ev else None,
+            "very_hard_contact_rate": daily_vhard / daily_contact_ev if daily_contact_ev else None,
+            "elite_contact_rate": daily_elite / daily_contact_ev if daily_contact_ev else None,
         })
 
     # Window-relative variation of daily means, not a league or per-PA reference.

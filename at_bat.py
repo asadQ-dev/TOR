@@ -26,9 +26,6 @@ SCORE_WEIGHTS = {
 
 SWING_REQUIRED_OUTCOMES = ("hit_by_pitch", "intentional_walk")
 
-# Pitch descriptions that count as "contact" for each sub-score.
-CONTACT_DESCRIPTIONS = ("foul", "hit_into_play")
-
 # (minimum pitch count, score) tiers, checked in order from most to least pitches.
 PITCH_COUNT_TIERS = [
     (6, 4),
@@ -94,17 +91,20 @@ BUNT_SWING_DESCRIPTIONS = (
     "bunt_foul_tip",
 )
 
+POWER_CONTACT_DESCRIPTIONS = tuple(
+    description for description in SWING_DESCRIPTIONS
+    if description not in WHIFF_DESCRIPTIONS
+    and description not in BUNT_SWING_DESCRIPTIONS
+)
+
+# TOR scoring categories are narrower than descriptive trend populations.
+CONTACT_DESCRIPTIONS = ("foul", "hit_into_play")
+
 BAT_SPEED_DESCRIPTIONS = (
     "foul",
     "hit_into_play",
     "swinging_strike",
     "swinging_strike_blocked",
-)
-
-POWER_CONTACT_DESCRIPTIONS = tuple(
-    set(SWING_DESCRIPTIONS)
-    - set(WHIFF_DESCRIPTIONS)
-    - set(BUNT_SWING_DESCRIPTIONS)
 )
 
 # How much of the bat-speed base score counts, depending on what happened to the pitch.

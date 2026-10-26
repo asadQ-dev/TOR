@@ -503,3 +503,109 @@ class TrendTests(unittest.TestCase):
                     self.assertIsNone(day["hard_contact_rate"])
                     self.assertIsNone(day["very_hard_contact_rate"])
                     self.assertIsNone(day["elite_contact_rate"])
+
+    def test_power_contact_descriptions_populate_ev_tier_profile(self):
+        for description, expected_count in (
+            ("swinging_strike", 0),
+            ("swinging_strike_blocked", 0),
+            ("foul", 1),
+            ("foul_tip", 1),
+            ("hit_into_play", 1),
+            ("hit_into_play_no_out", 1),
+            ("hit_into_play_score", 1),
+            ("foul_bunt", 0),
+            ("bunt_foul_tip", 0),
+            ("missed_bunt", 0),
+            ("ball", 0),
+        ):
+            with self.subTest(description=description):
+                profile = get_trends(
+                    [ExampleAtBat("2026-06-01", 70, pitches=[
+                        Pitch(1, description, 0, 0, 120, 80),
+                    ])],
+                    "2026-06-01", "2026-06-01",
+                )["summary"]["bs_ev_tier_profile"]
+                tier_data = profile["80-85"]
+                self.assertEqual(tier_data["contact_count"], expected_count)
+
+    def test_power_vs_misses_profile_counts_all_nonbunt_swings(self):
+        for description, expected_whiffs in (
+            ("swinging_strike", 1),
+            ("swinging_strike_blocked", 1),
+            ("foul", 0),
+            ("foul_tip", 0),
+            ("hit_into_play", 0),
+            ("hit_into_play_no_out", 0),
+            ("hit_into_play_score", 0),
+            ("foul_bunt", "excluded"),
+            ("missed_bunt", "excluded"),
+            ("bunt_foul_tip", "excluded"),
+            ("ball", "excluded")
+        ):
+            with self.subTest(description=description):
+                profile = get_trends(
+                    [ExampleAtBat("2026-06-01", 70, pitches=[
+                        Pitch(1, description, 0, 0, 120, 80),
+                    ])],
+                    "2026-06-01", "2026-06-01",
+                )["summary"]["power_vs_misses_profile"]
+                tier_data = profile["80-85"]
+                if expected_whiffs == "excluded":
+                    self.assertEqual(tier_data["swing_count"], 0)
+                    self.assertEqual(tier_data["tiered_whiff_count"], 0)
+                    self.assertIsNone(tier_data["tiered_whiff_rate"])
+                else:
+                    self.assertEqual(tier_data["swing_count"], 1)
+                    self.assertEqual(tier_data["tiered_whiff_count"], expected_whiffs)
+                    self.assertEqual(tier_data["tiered_whiff_rate"], expected_whiffs / tier_data["swing_count"])
+
+    def test_power_vs_misses_profile_pools_mixed_pitches_by_tier(self):
+        result = get_trends(
+            [
+                ExampleAtBat("2026-06-01", 70, pitches=[
+                    Pitch(1, "foul", 0, 0, None, 80),
+                    Pitch(2, "swinging_strike", 0, 1, 120, 81),
+                    Pitch(3, "hit_into_play", 0, 2, 100, 84.9),
+                    Pitch(4, "foul_bunt", 0, 0, 90, 82),
+                    Pitch(5, "ball", 0, 0, 0, 82),
+                    Pitch(6, "swinging_strike", 0, 0, 0, 69),
+                    Pitch(7, "swinging_strike", 0, 0, 0, None),
+                    Pitch(8, "swinging_strike", 0, 0, 0, math.inf),
+                    Pitch(9, "swinging_strike", 0, 0, 0, math.nan),
+                ]),
+                ExampleAtBat("2026-06-02", 70, pitches=[
+                    Pitch(1, "swinging_strike_blocked", 0, 0, None, 82),
+                    Pitch(2, "foul_tip", 0, 1, 0, 83),
+                    Pitch(3, "hit_into_play_score", 0, 2, 110, 84),
+                    Pitch(4, "swinging_strike", 0, 0, 0, 75),
+                    Pitch(5, "hit_into_play_no_out", 0, 1, 95, 79.9),
+                    Pitch(6, "foul", 0, 0, 90, 85),
+                ]),
+                ExampleAtBat("2026-07-01", 70, pitches=[
+                    Pitch(1, "swinging_strike", 0, 0, 0, 80),
+                ]),
+            ],
+            "2026-06-01", "2026-06-02",
+        )
+        profile = result["summary"]["power_vs_misses_profile"]
+        for tier, swings, whiffs, rate in (
+            ("<75", 0, 0, None),
+            ("75-80", 2, 1, 0.5),
+            ("80-85", 6, 2, 1 / 3),
+            ("85+", 1, 0, 0),
+        ):
+            with self.subTest(tier=tier):
+                self.assertEqual(profile[tier]["swing_count"], swings)
+                self.assertEqual(profile[tier]["tiered_whiff_count"], whiffs)
+                if rate is None:
+                    self.assertIsNone(profile[tier]["tiered_whiff_rate"])
+                else:
+                    self.assertAlmostEqual(profile[tier]["tiered_whiff_rate"], rate)
+        self.assertEqual(
+            sum(data["swing_count"] for data in profile.values()),
+            sum(day["speedq_swing_count"] for day in result["daily_data"]),
+        )
+        self.assertEqual(
+            sum(data["tiered_whiff_count"] for data in profile.values()),
+            sum(day["speedq_whiff_count"] for day in result["daily_data"]),
+        )

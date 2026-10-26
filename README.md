@@ -67,6 +67,13 @@ no variation in either coordinate. Contact counts accompany the tier profile;
 three tiers alone do not establish reliability. This is a descriptive
 selected-window relationship, not a daily trend or a transfer-efficiency score.
 
+The summary also includes `power_vs_misses_profile`: unweighted swing counts,
+`tiered_whiff_count`, and `tiered_whiff_rate` in the same bat-speed tiers.
+It includes all recognized non-bunt swings with finite bat speed >69 mph,
+regardless of EV availability. Whiffs are identified by pitch description, not
+missing EV. Empty tiers report a `null` whiff rate. This profile currently
+measures misses by speed, not hard-contact rates within each speed tier.
+
 Days without eligible TOR appearances retain their measurements and report TOR
 as `null`. In trend output, `plate_appearances` is the TOR-scored count;
 `total_plate_appearances` includes all appearances. Pitch-based rates currently

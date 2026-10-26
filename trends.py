@@ -1,17 +1,30 @@
 import math
+
 import numpy as np
 
 from at_bat import (
     BAT_SPEED_TIERS,
     BUNT_SWING_DESCRIPTIONS,
     CONTACT_DESCRIPTIONS,
+    POWER_CONTACT_DESCRIPTIONS,
     QUALITY_CONTACT_TIERS,
     SWING_DESCRIPTIONS,
     WHIFF_DESCRIPTIONS,
-    POWER_CONTACT_DESCRIPTIONS
 )
 from scorer import player_tor
 
+BAT_SPEED_PROFILE_TIERS = ("<75", "75-80", "80-85", "85+")
+
+
+def bat_speed_profile_tier(bat_speed):
+    """Classify a finite, speed-qualified swing into a profile tier."""
+    if bat_speed < 75:
+        return "<75"
+    if bat_speed < 80:
+        return "75-80"
+    if bat_speed < 85:
+        return "80-85"
+    return "85+"
 
 
 def group_by_date(player_at_bats):
@@ -37,40 +50,49 @@ def get_trends(player_at_bats, start_date, end_date):
     ab_by_date = group_by_date(filtered_abs)
 
     daily_data = []
-    qualifying_exit_velos = []
     qualifying_bat_speeds = []
-    qualifying_power_pairs = []
+    qualifying_exit_velos = []
 
-    exit_velo_cutoff = min(threshold for threshold, _ in QUALITY_CONTACT_TIERS)
+    qualifying_power_pairs = []
+    qualifying_power_vs_misses_pairs = []
+
     bat_speed_cutoff = min(threshold for threshold, _ in BAT_SPEED_TIERS)
+    exit_velo_cutoff = min(threshold for threshold, _ in QUALITY_CONTACT_TIERS)
+
     hard_exit_velo_cutoff = 95
     very_hard_exit_velo_cutoff = 105
     elite_exit_velo_cutoff = 115
 
     for game_date, at_bats in sorted(ab_by_date.items()):
         scored_at_bats = [ab for ab in at_bats if ab.is_valid_ab()]
-        daily_exit_velos = []
-        daily_bat_speeds = []
-        daily_power_pairs = []
+
         daily_pitches = 0
         daily_swings = 0
-        daily_nonbunt_swings = 0
-        daily_nonbunt_whiffs = 0
-        daily_speedq_swings = 0
-        daily_speedq_whiffs = 0
         daily_whiffs = 0
         daily_bunt_swings = 0
+
+        daily_nonbunt_swings = 0
+        daily_nonbunt_whiffs = 0
+
+        daily_bat_speeds = []
+        daily_speedq_swings = 0
+        daily_speedq_whiffs = 0
+        excluded_bat_speed_count = 0
+        missing_bat_speed_count = 0
+
+        daily_exit_velos = []
+        excluded_exit_velo_count = 0
+        missing_exit_velo_count = 0
+
         daily_contact_ev = 0
         daily_hard = 0
         daily_vhard = 0
         daily_elite = 0
         missing_power_exit_velo_count = 0
 
-        excluded_exit_velo_count = 0
-        missing_exit_velo_count = 0
-        excluded_bat_speed_count = 0
-        missing_bat_speed_count = 0
-        
+        daily_power_pairs = []
+        daily_power_vs_misses_pairs = []
+
         for ab in at_bats:
             for pitch in ab.pitches:
                 exit_velo = pitch.exit_velo
@@ -95,6 +117,9 @@ def get_trends(player_at_bats, start_date, end_date):
                         elif bat_speed > bat_speed_cutoff:
                             daily_bat_speeds.append(bat_speed)
                             daily_speedq_swings += 1
+                            daily_power_vs_misses_pairs.append(
+                                (bat_speed, pitch.description)
+                            )
                             if is_whiff:
                                 daily_speedq_whiffs += 1
                         else:
@@ -144,10 +169,10 @@ def get_trends(player_at_bats, start_date, end_date):
                         weight = 1.0
                     daily_power_pairs.append((bat_speed, exit_velo, weight))
 
-
         qualifying_exit_velos.extend(daily_exit_velos)
         qualifying_bat_speeds.extend(daily_bat_speeds)
         qualifying_power_pairs.extend(daily_power_pairs)
+        qualifying_power_vs_misses_pairs.extend(daily_power_vs_misses_pairs)
         
 
         daily_avg_exit_velo = sum(daily_exit_velos) / len(daily_exit_velos) if daily_exit_velos else None
@@ -156,40 +181,45 @@ def get_trends(player_at_bats, start_date, end_date):
         daily_data.append({
             "date": game_date,
             "tor": player_tor(scored_at_bats) if scored_at_bats else None,
+            "tor_z_score": None,
             # Retained as the TOR weight; total appearances also include HBP/IBB.
             "plate_appearances": len(scored_at_bats),
             "total_plate_appearances": len(at_bats),
-            "avg_exit_velo": daily_avg_exit_velo,
-            "qualifying_exit_velo_count": len(daily_exit_velos),
-            "excluded_exit_velo_count": excluded_exit_velo_count,
-            "missing_exit_velo_count": missing_exit_velo_count,
-            "contact_exit_velo_count": daily_contact_ev,
-            "hard_exit_velo_count": daily_hard,
-            "very_hard_exit_velo_count": daily_vhard,
-            "elite_exit_velo_count": daily_elite,
-            "missing_power_exit_velo_count": missing_power_exit_velo_count,
-            "exit_velo_z_score": None,
-            "tor_z_score": None,
-            "avg_bat_speed": daily_avg_bat_speed,
-            "qualifying_bat_speed_count": len(daily_bat_speeds),
-            "excluded_bat_speed_count": excluded_bat_speed_count,
-            "missing_bat_speed_count": missing_bat_speed_count,
-            "bat_speed_z_score": None,
+
             "pitch_count": daily_pitches,
             "swing_count": daily_swings,
             "whiff_count": daily_whiffs,
             "bunt_swing_count": daily_bunt_swings,
-            "nonbunt_swing_count": daily_nonbunt_swings,
-            "nonbunt_whiff_count": daily_nonbunt_whiffs,
-            "speedq_swing_count": daily_speedq_swings,
-            "speedq_whiff_count": daily_speedq_whiffs,
             "swing_rate": daily_swings / daily_pitches if daily_pitches else None,
             "whiff_rate": daily_whiffs / daily_swings if daily_swings else None,
             "swstr_rate": daily_whiffs / daily_pitches if daily_pitches else None,
+
+            "nonbunt_swing_count": daily_nonbunt_swings,
+            "nonbunt_whiff_count": daily_nonbunt_whiffs,
             "nonbunt_whiff_rate": daily_nonbunt_whiffs / daily_nonbunt_swings if daily_nonbunt_swings else None,
+
+            "speedq_swing_count": daily_speedq_swings,
+            "speedq_whiff_count": daily_speedq_whiffs,
             "speedq_whiff_rate": daily_speedq_whiffs / daily_speedq_swings if daily_speedq_swings else None,
+            "avg_bat_speed": daily_avg_bat_speed,
+            "bat_speed_z_score": None,
+            "qualifying_bat_speed_count": len(daily_bat_speeds),
+            "excluded_bat_speed_count": excluded_bat_speed_count,
+            "missing_bat_speed_count": missing_bat_speed_count,
+
+            "avg_exit_velo": daily_avg_exit_velo,
+            "exit_velo_z_score": None,
+            "qualifying_exit_velo_count": len(daily_exit_velos),
+            "excluded_exit_velo_count": excluded_exit_velo_count,
+            "missing_exit_velo_count": missing_exit_velo_count,
+
+            "contact_exit_velo_count": daily_contact_ev,
+            "missing_power_exit_velo_count": missing_power_exit_velo_count,
+            "hard_exit_velo_count": daily_hard,
             "hard_contact_rate": daily_hard / daily_contact_ev if daily_contact_ev else None,
+            "very_hard_exit_velo_count": daily_vhard,
             "very_hard_contact_rate": daily_vhard / daily_contact_ev if daily_contact_ev else None,
+            "elite_exit_velo_count": daily_elite,
             "elite_contact_rate": daily_elite / daily_contact_ev if daily_contact_ev else None,
         })
 
@@ -249,6 +279,7 @@ def get_trends(player_at_bats, start_date, end_date):
 
     # Pool contacts across the selected window, not daily correlations.
     bs_ev_correlation_index = None
+
     bs_ev_tier_profile = {
         tier: {
             "bs_sum": 0.0,
@@ -256,17 +287,10 @@ def get_trends(player_at_bats, start_date, end_date):
             "weight_sum": 0.0,
             "contact_count": 0,
         }
-        for tier in ("<75", "75-80", "80-85", "85+")
+        for tier in BAT_SPEED_PROFILE_TIERS
     }
     for bat_speed, exit_velo, weight in qualifying_power_pairs:
-        if bat_speed < 75:
-            tier = "<75"
-        elif bat_speed < 80:
-            tier = "75-80"
-        elif bat_speed < 85:
-            tier = "80-85"
-        else:
-            tier = "85+"
+        tier = bat_speed_profile_tier(bat_speed)
 
         data = bs_ev_tier_profile[tier]
         data["bs_sum"] += bat_speed * weight
@@ -296,6 +320,29 @@ def get_trends(player_at_bats, start_date, end_date):
                 np.corrcoef(bat_speed_means, exit_velo_means)[0, 1]
             )
 
+    power_vs_misses_profile = {
+        tier: {
+            "swing_count": 0,
+            "tiered_whiff_count": 0,
+            "tiered_whiff_rate": None,
+        }
+        for tier in BAT_SPEED_PROFILE_TIERS
+    }
+
+    for bat_speed, description in qualifying_power_vs_misses_pairs:
+        tier = bat_speed_profile_tier(bat_speed)
+
+        data = power_vs_misses_profile[tier]
+        data["swing_count"] += 1
+        if description in WHIFF_DESCRIPTIONS:
+            data["tiered_whiff_count"] += 1
+
+    for data in power_vs_misses_profile.values():
+        data["tiered_whiff_rate"] = (
+            data["tiered_whiff_count"] / data["swing_count"]
+            if data["swing_count"] else None
+        )
+
     return {
         "daily_data": daily_data,
         "summary": {
@@ -303,5 +350,7 @@ def get_trends(player_at_bats, start_date, end_date):
             "bs_ev_tier_profile": bs_ev_tier_profile,
             "contact_count": len(qualifying_power_pairs),
             "populated_tier_count": len(populated_tiers),
+            "tiered_whiff_rate": {tier: data["tiered_whiff_rate"] for tier, data in power_vs_misses_profile.items()},
+            "power_vs_misses_profile": power_vs_misses_profile,
         },
     }

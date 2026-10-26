@@ -1,3 +1,4 @@
+import json
 import math
 import unittest
 from dataclasses import dataclass, field
@@ -23,6 +24,94 @@ class ExampleAtBat:
 
 
 class TrendTests(unittest.TestCase):
+    def test_correlation_pools_contacts_across_selected_days(self):
+        appearances = [
+            ExampleAtBat(f"2026-06-0{number}", 70, pitches=[
+                Pitch(1, "hit_into_play", 0, 0, ev, speed),
+            ])
+            for number, (speed, ev) in enumerate(
+                ((72, 80), (77, 90), (82, 100)), 1
+            )
+        ]
+        result = get_trends(appearances, "2026-06-01", "2026-06-03")
+        self.assertEqual(set(result), {"daily_data", "summary"})
+        self.assertEqual(len(result["daily_data"]), 3)
+        for day in result["daily_data"]:
+            self.assertNotIn("bs_ev_correlation_index", day)
+        summary = result["summary"]
+        self.assertAlmostEqual(summary["bs_ev_correlation_index"], 1)
+        self.assertEqual(summary["contact_count"], 3)
+        self.assertEqual(summary["populated_tier_count"], 3)
+        shorter = get_trends(appearances, "2026-06-02", "2026-06-03")["summary"]
+        self.assertEqual(shorter["contact_count"], 2)
+        self.assertIsNone(shorter["bs_ev_correlation_index"])
+
+    def test_window_tiers_preserve_weights_and_boundary_membership(self):
+        result = get_trends(
+            [ExampleAtBat("2026-06-01", 70, pitches=[
+                Pitch(1, "foul", 0, 0, 60, 69.5),
+                Pitch(2, "hit_into_play", 0, 0, 100, 74),
+                Pitch(3, "hit_into_play_no_out", 0, 0, 90, 75),
+                Pitch(4, "hit_into_play_score", 0, 0, 100, 80),
+                Pitch(5, "foul_tip", 0, 0, 110, 85),
+            ])],
+            "2026-06-01", "2026-06-01",
+        )
+        profile = result["summary"]["bs_ev_tier_profile"]
+        low = profile["<75"]
+        self.assertEqual(low["contact_count"], 2)
+        self.assertAlmostEqual(low["weight_sum"], 1.6)
+        self.assertAlmostEqual(low["avg_exit_velo"], (60 * 0.6 + 100) / 1.6)
+        self.assertAlmostEqual(low["avg_bat_speed"], (69.5 * 0.6 + 74) / 1.6)
+        for tier, speed in (("75-80", 75), ("80-85", 80), ("85+", 85)):
+            self.assertEqual(profile[tier]["contact_count"], 1)
+            self.assertAlmostEqual(profile[tier]["avg_bat_speed"], speed)
+        self.assertAlmostEqual(profile["85+"]["weight_sum"], 0.6)
+
+    def test_window_correlation_handles_empty_sparse_and_constant_data(self):
+        for measurements in (
+            (),
+            ((72, 90),),
+            ((72, 90), (77, 100)),
+            ((72, 90), (77, 90), (82, 90)),
+        ):
+            with self.subTest(measurements=measurements):
+                result = get_trends(
+                    [ExampleAtBat("2026-06-01", 70, pitches=[
+                        Pitch(i, "foul", 0, 0, ev, speed)
+                        for i, (speed, ev) in enumerate(measurements, 1)
+                    ])],
+                    "2026-06-01", "2026-06-01",
+                )
+                self.assertIsNone(result["summary"]["bs_ev_correlation_index"])
+        empty = get_trends([], "2026-06-01", "2026-06-01")
+        self.assertEqual(empty["daily_data"], [])
+        self.assertEqual(empty["summary"]["contact_count"], 0)
+        for tier in empty["summary"]["bs_ev_tier_profile"].values():
+            self.assertIsNone(tier["avg_bat_speed"])
+            self.assertIsNone(tier["avg_exit_velo"])
+
+    def test_window_correlation_excludes_invalid_pairs_and_can_be_negative(self):
+        result = get_trends(
+            [ExampleAtBat("2026-06-01", 70, pitches=[
+                Pitch(1, "hit_into_play", 0, 0, 100, 72),
+                Pitch(2, "hit_into_play", 0, 0, 90, 77),
+                Pitch(3, "hit_into_play", 0, 0, 80, 82),
+                Pitch(4, "foul", 0, 0, 120, math.inf),
+                Pitch(5, "foul", 0, 0, math.inf, 85),
+                Pitch(6, "foul", 0, 0, 120, None),
+                Pitch(7, "foul", 0, 0, math.nan, 85),
+                Pitch(8, "foul_bunt", 0, 0, 120, 85),
+                Pitch(9, "swinging_strike", 0, 0, 120, 85),
+                Pitch(10, "foul", 0, 0, 120, 69),
+                Pitch(11, "foul", 0, 0, 0, 85),
+            ])],
+            "2026-06-01", "2026-06-01",
+        )
+        self.assertEqual(result["summary"]["contact_count"], 3)
+        self.assertAlmostEqual(result["summary"]["bs_ev_correlation_index"], -1)
+        json.dumps(result, allow_nan=False)
+
     def test_bat_speed_population_includes_swinging_strikes(self):
         result = get_trends(
             [ExampleAtBat(
@@ -33,6 +122,7 @@ class TrendTests(unittest.TestCase):
             "2026-06-01",
             "2026-06-01",
         )
+        result = result["daily_data"]
         self.assertEqual(result[0]["avg_bat_speed"], 80)
         self.assertEqual(result[0]["qualifying_bat_speed_count"], 1)
         self.assertEqual(result[0]["excluded_bat_speed_count"], 0)
@@ -72,7 +162,7 @@ class TrendTests(unittest.TestCase):
                         "2026-06-01",
                         "2026-06-01",
                     )
-                    day = result[0]
+                    day = result["daily_data"][0]
                     self.assertEqual(day["swing_count"], 1)
                     self.assertEqual(day["whiff_count"], 1)
                     self.assertEqual(day["nonbunt_swing_count"], 1)
@@ -116,7 +206,7 @@ class TrendTests(unittest.TestCase):
             ExampleAtBat("2026-06-03", 1000, valid=False),
             ExampleAtBat("2026-07-01", 1000),
         ]
-        result = get_trends(appearances, "2026-06-01", "2026-06-03")
+        result = get_trends(appearances, "2026-06-01", "2026-06-03")["daily_data"]
         self.assertEqual(
             [(day["date"], day["tor"], day["plate_appearances"]) for day in result],
             [("2026-06-01", 70.0, 2), ("2026-06-02", 90.0, 1), ("2026-06-03", None, 0)],
@@ -129,7 +219,7 @@ class TrendTests(unittest.TestCase):
             ExampleAtBat("2026-06-01", 80),
             ExampleAtBat("2026-06-02", 90),
         ]
-        result = get_trends(appearances, "2026-06-01", "2026-06-02")
+        result = get_trends(appearances, "2026-06-01", "2026-06-02")["daily_data"]
         mean = (60 + 80 + 90) / 3
         deviation = math.sqrt((2 * (70 - mean) ** 2 + (90 - mean) ** 2) / 3)
         self.assertEqual(result[0]["tor_z_score"], round((70 - mean) / deviation, 2))
@@ -141,11 +231,11 @@ class TrendTests(unittest.TestCase):
             "2026-06-01",
             "2026-06-02",
         )
-        self.assertEqual([day["tor_z_score"] for day in result], [0, 0])
+        self.assertEqual([day["tor_z_score"] for day in result["daily_data"]], [0, 0])
 
     def test_one_appearance_preserves_current_output(self):
         self.assertEqual(
-            get_trends([ExampleAtBat("2026-06-01", 70)], "2026-06-01", "2026-06-01"),
+            get_trends([ExampleAtBat("2026-06-01", 70)], "2026-06-01", "2026-06-01")["daily_data"],
             [{
                 "date": "2026-06-01",
                 "tor": 70.0,
@@ -197,7 +287,7 @@ class TrendTests(unittest.TestCase):
         ):
             with self.subTest(appearances=appearances):
                 self.assertEqual(
-                    get_trends(appearances, "2026-06-01", "2026-06-02"),
+                    get_trends(appearances, "2026-06-01", "2026-06-02")["daily_data"],
                     [],
                 )
 
@@ -211,7 +301,7 @@ class TrendTests(unittest.TestCase):
         scores_before = [ab.calculate_tor() for ab in (valid, hbp)]
         expected_tor = player_tor([valid, hbp])
 
-        day = get_trends([valid, hbp], "2026-06-01", "2026-06-01")[0]
+        day = get_trends([valid, hbp], "2026-06-01", "2026-06-01")["daily_data"][0]
 
         self.assertEqual(day["tor"], expected_tor)
         self.assertEqual(day["plate_appearances"], 2)
@@ -241,6 +331,7 @@ class TrendTests(unittest.TestCase):
             "2026-06-01",
             "2026-06-03",
         )
+        result = result["daily_data"]
         day = result[1]
         self.assertEqual([point["tor_z_score"] for point in result], [-1, None, 1])
         self.assertIsNone(day["tor"])
@@ -262,7 +353,7 @@ class TrendTests(unittest.TestCase):
             "2026-06-01",
             "2026-06-01",
         )
-        day = result[0]
+        day = result["daily_data"][0]
         self.assertEqual(day["avg_bat_speed"], 85)
         self.assertEqual(day["qualifying_bat_speed_count"], 2)
         self.assertEqual(day["speedq_swing_count"], 2)
@@ -289,6 +380,7 @@ class TrendTests(unittest.TestCase):
             "2026-06-01",
             "2026-06-01"
         )
+        result = result["daily_data"]
         self.assertEqual(result[0]["swing_count"], 4)
         self.assertEqual(result[0]["pitch_count"], 5)
         self.assertEqual(result[0]["swing_rate"], 4 / 5)
@@ -314,7 +406,7 @@ class TrendTests(unittest.TestCase):
                 Pitch(6, "hit_into_play", 0, 0,   0, 80),
             ])],
             "2026-06-01","2026-06-01"
-        )[0]
+        )["daily_data"][0]
         self.assertEqual(result["contact_exit_velo_count"], 4)
         self.assertEqual(result["hard_exit_velo_count"], 3)
         self.assertEqual(result["very_hard_exit_velo_count"], 2)
@@ -329,12 +421,15 @@ class TrendTests(unittest.TestCase):
 
     def test_contact_tier_boundaries_match_chart_definition(self):
         for ev, counts in (
-            (94.99, (0, 0, 0)),
+            (94.9, (0, 0, 0)),
             (95, (1, 0, 0)),
-            (105, (1, 0, 0)),
-            (105.01, (1, 1, 0)),
-            (115, (1, 1, 0)),
-            (115.01, (1, 1, 1)),
+            (95.1, (1, 0, 0)),
+            (104.9, (1, 0, 0)),
+            (105, (1, 1, 0)),
+            (105.1, (1, 1, 0)),
+            (114.9, (1, 1, 0)),
+            (115, (1, 1, 1)),
+            (115.1, (1, 1, 1)),
         ):
             with self.subTest(exit_velo=ev):
                 day = get_trends(
@@ -342,7 +437,7 @@ class TrendTests(unittest.TestCase):
                         Pitch(1, "foul", 0, 0, ev, 80),
                     ])],
                     "2026-06-01", "2026-06-01",
-                )[0]
+                )["daily_data"][0]
                 self.assertEqual(day["contact_exit_velo_count"], 1)
                 for key, expected in zip(
                     ("hard_exit_velo_count", "very_hard_exit_velo_count", "elite_exit_velo_count"),
@@ -360,7 +455,7 @@ class TrendTests(unittest.TestCase):
                 ab.add_pitch(Pitch(4, "foul",      0, 2, 119,  90))
                 ab.add_pitch(Pitch(5, outcome,     0, 2,   0,   0))
                 self.assertTrue(ab.is_valid_ab())
-                day = get_trends([ab], "2026-06-01", "2026-06-01")[0]
+                day = get_trends([ab], "2026-06-01", "2026-06-01")["daily_data"][0]
                 self.assertEqual(day["contact_exit_velo_count"], 2)
                 self.assertEqual(day["hard_exit_velo_count"], 2)
                 self.assertEqual(day["very_hard_exit_velo_count"], 1)
@@ -371,7 +466,7 @@ class TrendTests(unittest.TestCase):
                 self.assertEqual(day["avg_exit_velo"], (98 + 119) / 2)
 
     def test_power_population_requires_contact_speed_and_measured_ev(self):
-        for description, speed, ev, eligible in (
+        for description, bat_speed, ev, eligible in (
             ("foul", 69, 120, False),
             ("foul", 69.01, 120, True),
             ("foul", None, 120, False),
@@ -393,13 +488,13 @@ class TrendTests(unittest.TestCase):
             ("missed_bunt", 80, 120, False),
             ("ball", 80, 120, False),
         ):
-            with self.subTest(description=description, speed=speed, ev=ev):
+            with self.subTest(description=description, bat_speed=bat_speed, ev=ev):
                 day = get_trends(
                     [ExampleAtBat("2026-06-01", 70, pitches=[
-                        Pitch(1, description, 0, 0, ev, speed),
+                        Pitch(1, description, 0, 0, ev, bat_speed),
                     ])],
                     "2026-06-01", "2026-06-01",
-                )[0]
+                )["daily_data"][0]
                 self.assertEqual(day["contact_exit_velo_count"], int(eligible))
                 self.assertEqual(day["hard_exit_velo_count"], int(eligible))
                 if eligible:

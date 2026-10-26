@@ -42,7 +42,7 @@ class AtBatTests(unittest.TestCase):
                 self.assertAlmostEqual(player_tor([ab]), expected)
                 self.assertEqual(rank_players([ab], min_pas=1), [("Example", expected)])
 
-                day = get_trends([ab], "2026-06-01", "2026-06-01")[0]
+                day = get_trends([ab], "2026-06-01", "2026-06-01")["daily_data"][0]
                 self.assertAlmostEqual(day["tor"], expected)
                 self.assertEqual(day["plate_appearances"], 1)
                 self.assertEqual(day["avg_exit_velo"], 120)
@@ -70,7 +70,7 @@ class AtBatTests(unittest.TestCase):
         ab.add_pitch(Pitch(1, "ball", 0, 0, 0, 0))
         ab.add_pitch(Pitch(2, "hit_by_pitch", 1, 0, 0, 0))
 
-        day = get_trends([ab], "2026-06-01", "2026-06-01")[0]
+        day = get_trends([ab], "2026-06-01", "2026-06-01")["daily_data"][0]
 
         self.assertIsNone(day["tor"])
         self.assertIsNone(day["tor_z_score"])
@@ -107,7 +107,7 @@ class AtBatTests(unittest.TestCase):
         self.assertAlmostEqual(player_tor([ab]), expected)
         self.assertEqual(rank_players([ab], min_pas=1), [("Example", expected)])
 
-        day = get_trends([ab], "2026-06-01", "2026-06-01")[0]
+        day = get_trends([ab], "2026-06-01", "2026-06-01")["daily_data"][0]
         self.assertAlmostEqual(day["tor"], expected)
         self.assertEqual(day["plate_appearances"], 1)
         self.assertEqual(day["total_plate_appearances"], 1)

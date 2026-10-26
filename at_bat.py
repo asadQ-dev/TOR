@@ -101,6 +101,12 @@ BAT_SPEED_DESCRIPTIONS = (
     "swinging_strike_blocked",
 )
 
+POWER_CONTACT_DESCRIPTIONS = tuple(
+    set(SWING_DESCRIPTIONS)
+    - set(WHIFF_DESCRIPTIONS)
+    - set(BUNT_SWING_DESCRIPTIONS)
+)
+
 # How much of the bat-speed base score counts, depending on what happened to the pitch.
 BAT_SPEED_CONTACT_MULTIPLIER = {
     "hit_into_play":   1.0,
@@ -118,6 +124,8 @@ OUTCOME_SCORES = {
     "field_out": 0,
     "strikeout": -1,
 }
+
+
 
 
 def _lookup_tier(value, tiers, default=0):

@@ -33,7 +33,7 @@ and later scoring calibration and predictive validation.
 * **Implemented trend backend:** Date-filtered daily TOR, qualifying exit velocity
   and bat speed, and swing/whiff counts and rates for all offers, explicitly
   non-bunt offers, and speed-qualified offers. Cumulative power-contact rates
-  include fouls: hard (EV >=95 mph), very hard (>105), and elite (>115).
+  include fouls: hard (EV >=95 mph), very hard (>=105), and elite (>=115).
 * **Scoring checkpoint:** Hard-foul bonuses survive a later HBP or intentional walk.
   These appearances count toward TOR when they contain a non-bunt-description swing;
   otherwise they remain excluded. Explicit bunt attempts earn no contact/bat-speed
@@ -56,6 +56,16 @@ produces a `null` rate. Existing qualifying EV averages still use foul/in-play E
 above 80 mph independently of bat speed. TOR now gives blocked swinging strikes
 the same reduced bat-speed bonus as ordinary misses.
 Trend z-scores are relative to the selected window, not a league benchmark.
+
+`get_trends` returns `daily_data` and a selected-window `summary`. The summary
+pools eligible contact pairs across the date range, weights fouls/foul tips at
+0.6 and balls in play at 1.0, and reports weighted mean bat speed and EV in
+four bat-speed tiers: >69 to <75, 75 to <80, 80 to <85, and >=85 mph.
+Its bat-speed/EV correlation is Pearson's r across populated tier means, with
+equal influence per tier. It is `null` with fewer than three populated tiers or
+no variation in either coordinate. Contact counts accompany the tier profile;
+three tiers alone do not establish reliability. This is a descriptive
+selected-window relationship, not a daily trend or a transfer-efficiency score.
 
 Days without eligible TOR appearances retain their measurements and report TOR
 as `null`. In trend output, `plate_appearances` is the TOR-scored count;

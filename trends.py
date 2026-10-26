@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 from at_bat import (
     BAT_SPEED_TIERS,
@@ -7,8 +8,10 @@ from at_bat import (
     QUALITY_CONTACT_TIERS,
     SWING_DESCRIPTIONS,
     WHIFF_DESCRIPTIONS,
+    POWER_CONTACT_DESCRIPTIONS
 )
 from scorer import player_tor
+
 
 
 def group_by_date(player_at_bats):
@@ -36,6 +39,7 @@ def get_trends(player_at_bats, start_date, end_date):
     daily_data = []
     qualifying_exit_velos = []
     qualifying_bat_speeds = []
+    qualifying_power_pairs = []
 
     exit_velo_cutoff = min(threshold for threshold, _ in QUALITY_CONTACT_TIERS)
     bat_speed_cutoff = min(threshold for threshold, _ in BAT_SPEED_TIERS)
@@ -47,6 +51,7 @@ def get_trends(player_at_bats, start_date, end_date):
         scored_at_bats = [ab for ab in at_bats if ab.is_valid_ab()]
         daily_exit_velos = []
         daily_bat_speeds = []
+        daily_power_pairs = []
         daily_pitches = 0
         daily_swings = 0
         daily_nonbunt_swings = 0
@@ -119,13 +124,30 @@ def get_trends(player_at_bats, start_date, end_date):
                         daily_contact_ev += 1
                         if exit_velo >= hard_exit_velo_cutoff:
                             daily_hard += 1
-                        if exit_velo > very_hard_exit_velo_cutoff:
+                        if exit_velo >= very_hard_exit_velo_cutoff:
                             daily_vhard += 1
-                        if exit_velo > elite_exit_velo_cutoff:
+                        if exit_velo >= elite_exit_velo_cutoff:
                             daily_elite += 1
+
+                if (
+                    pitch.description in POWER_CONTACT_DESCRIPTIONS
+                    and bat_speed is not None
+                    and math.isfinite(bat_speed)
+                    and bat_speed > bat_speed_cutoff
+                    and exit_velo is not None
+                    and math.isfinite(exit_velo)
+                    and exit_velo > 0
+                ):
+                    if pitch.description in ("foul", "foul_tip"):
+                        weight = 0.6
+                    else:
+                        weight = 1.0
+                    daily_power_pairs.append((bat_speed, exit_velo, weight))
+
 
         qualifying_exit_velos.extend(daily_exit_velos)
         qualifying_bat_speeds.extend(daily_bat_speeds)
+        qualifying_power_pairs.extend(daily_power_pairs)
         
 
         daily_avg_exit_velo = sum(daily_exit_velos) / len(daily_exit_velos) if daily_exit_velos else None
@@ -225,4 +247,61 @@ def get_trends(player_at_bats, start_date, end_date):
             else:
                 day["bat_speed_z_score"] = 0
 
-    return daily_data
+    # Pool contacts across the selected window, not daily correlations.
+    bs_ev_correlation_index = None
+    bs_ev_tier_profile = {
+        tier: {
+            "bs_sum": 0.0,
+            "weighted_ev_sum": 0.0,
+            "weight_sum": 0.0,
+            "contact_count": 0,
+        }
+        for tier in ("<75", "75-80", "80-85", "85+")
+    }
+    for bat_speed, exit_velo, weight in qualifying_power_pairs:
+        if bat_speed < 75:
+            tier = "<75"
+        elif bat_speed < 80:
+            tier = "75-80"
+        elif bat_speed < 85:
+            tier = "80-85"
+        else:
+            tier = "85+"
+
+        data = bs_ev_tier_profile[tier]
+        data["bs_sum"] += bat_speed * weight
+        data["weighted_ev_sum"] += exit_velo * weight
+        data["weight_sum"] += weight
+        data["contact_count"] += 1
+
+    for data in bs_ev_tier_profile.values():
+        if data["weight_sum"] > 0:
+            data["avg_bat_speed"] = data["bs_sum"] / data["weight_sum"]
+            data["avg_exit_velo"] = data["weighted_ev_sum"] / data["weight_sum"]
+        else:
+            data["avg_bat_speed"] = None
+            data["avg_exit_velo"] = None
+
+    populated_tiers = [
+        data for data in bs_ev_tier_profile.values() if data["weight_sum"] > 0
+    ]
+    if len(populated_tiers) >= 3:
+        bat_speed_means = [data["avg_bat_speed"] for data in populated_tiers]
+        exit_velo_means = [data["avg_exit_velo"] for data in populated_tiers]
+        if (
+            max(bat_speed_means) > min(bat_speed_means)
+            and max(exit_velo_means) > min(exit_velo_means)
+        ):
+            bs_ev_correlation_index = float(
+                np.corrcoef(bat_speed_means, exit_velo_means)[0, 1]
+            )
+
+    return {
+        "daily_data": daily_data,
+        "summary": {
+            "bs_ev_correlation_index": bs_ev_correlation_index,
+            "bs_ev_tier_profile": bs_ev_tier_profile,
+            "contact_count": len(qualifying_power_pairs),
+            "populated_tier_count": len(populated_tiers),
+        },
+    }

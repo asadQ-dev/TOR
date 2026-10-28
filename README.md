@@ -58,7 +58,7 @@ the same reduced bat-speed bonus as ordinary misses.
 Trend z-scores are relative to the selected window, not a league benchmark.
 
 `get_trends` returns `daily_data` and a selected-window `summary`. The summary
-pools eligible contact pairs across the date range, weights fouls/foul tips at
+pools eligible contact pairs in `bs_power_profile` across the date range, weights fouls/foul tips at
 0.6 and balls in play at 1.0, and reports weighted mean bat speed and EV in
 four bat-speed tiers: >69 to <75, 75 to <80, 80 to <85, and >=85 mph.
 Its bat-speed/EV correlation is Pearson's r across populated tier means, with
@@ -67,7 +67,7 @@ no variation in either coordinate. Contact counts accompany the tier profile;
 three tiers alone do not establish reliability. This is a descriptive
 selected-window relationship, not a daily trend or a transfer-efficiency score.
 
-The summary also includes `power_vs_misses_profile`: unweighted swing counts,
+The summary also includes `bs_whiff_profile`: unweighted swing counts,
 `tiered_whiff_count`, and `tiered_whiff_rate` in the same bat-speed tiers.
 It includes all recognized non-bunt swings with finite bat speed >69 mph,
 regardless of EV availability. Whiffs are identified by pitch description, not

@@ -54,7 +54,7 @@ def get_trends(player_at_bats, start_date, end_date):
     qualifying_exit_velos = []
 
     qualifying_power_pairs = []
-    qualifying_power_vs_misses_pairs = []
+    qualifying_whiff_swings = []
 
     bat_speed_cutoff = min(threshold for threshold, _ in BAT_SPEED_TIERS)
     exit_velo_cutoff = min(threshold for threshold, _ in QUALITY_CONTACT_TIERS)
@@ -91,7 +91,7 @@ def get_trends(player_at_bats, start_date, end_date):
         missing_power_exit_velo_count = 0
 
         daily_power_pairs = []
-        daily_power_vs_misses_pairs = []
+        daily_whiff_swings = []
 
         for ab in at_bats:
             for pitch in ab.pitches:
@@ -117,7 +117,7 @@ def get_trends(player_at_bats, start_date, end_date):
                         elif bat_speed > bat_speed_cutoff:
                             daily_bat_speeds.append(bat_speed)
                             daily_speedq_swings += 1
-                            daily_power_vs_misses_pairs.append(
+                            daily_whiff_swings.append(
                                 (bat_speed, pitch.description, exit_velo)
                             )
                             if is_whiff:
@@ -172,7 +172,7 @@ def get_trends(player_at_bats, start_date, end_date):
         qualifying_exit_velos.extend(daily_exit_velos)
         qualifying_bat_speeds.extend(daily_bat_speeds)
         qualifying_power_pairs.extend(daily_power_pairs)
-        qualifying_power_vs_misses_pairs.extend(daily_power_vs_misses_pairs)
+        qualifying_whiff_swings.extend(daily_whiff_swings)
         
 
         daily_avg_exit_velo = sum(daily_exit_velos) / len(daily_exit_velos) if daily_exit_velos else None
@@ -339,7 +339,7 @@ def get_trends(player_at_bats, start_date, end_date):
         for tier in BAT_SPEED_PROFILE_TIERS
     }
 
-    for bat_speed, description, exit_velo in qualifying_power_vs_misses_pairs:
+    for bat_speed, description, exit_velo in qualifying_whiff_swings:
         tier = bat_speed_profile_tier(bat_speed)
 
         data = bs_whiff_profile[tier]
@@ -426,6 +426,7 @@ def get_trends(player_at_bats, start_date, end_date):
             "hard_contact_rate": hard_count / contact_count if contact_count else None,
             "vhard_contact_rate": vhard_count / contact_count if contact_count else None,
             "elite_contact_rate": elite_count / contact_count if contact_count else None,
+
             # Yield / whiff rate simplifies to measured hard contacts / misses.
             "hard_contact_to_whiff_ratio": hard_contact_to_whiff_ratio,
             "vhard_contact_to_whiff_ratio": vhard_contact_to_whiff_ratio,
@@ -442,11 +443,8 @@ def get_trends(player_at_bats, start_date, end_date):
         "daily_data": daily_data,
         "summary": {
             "bs_ev_correlation_index": bs_ev_correlation_index,
-            "bs_ev_tier_profile": bs_power_profile,
-            "contact_count": len(qualifying_power_pairs),
-            "populated_tier_count": len(populated_tiers),
-            "tiered_whiff_rate": {tier: data["tiered_whiff_rate"] for tier, data in bs_whiff_profile.items()},
-            "power_vs_misses_profile": bs_whiff_profile,
+            "bs_power_profile": bs_power_profile,
+            "bs_whiff_profile": bs_whiff_profile,
             "controlled_power_profile": bs_controlled_power_profile,
         },
     }

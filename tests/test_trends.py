@@ -40,10 +40,14 @@ class TrendTests(unittest.TestCase):
             self.assertNotIn("bs_ev_correlation_index", day)
         summary = result["summary"]
         self.assertAlmostEqual(summary["bs_ev_correlation_index"], 1)
-        self.assertEqual(summary["contact_count"], 3)
-        self.assertEqual(summary["populated_tier_count"], 3)
+        self.assertEqual(set(summary), {
+            "bs_ev_correlation_index", "bs_power_profile",
+            "bs_whiff_profile", "controlled_power_profile",
+        })
+        self.assertEqual(sum(t["contact_count"] for t in summary["bs_power_profile"].values()), 3)
+        self.assertEqual(sum(t["contact_count"] > 0 for t in summary["bs_power_profile"].values()), 3)
         shorter = get_trends(appearances, "2026-06-02", "2026-06-03")["summary"]
-        self.assertEqual(shorter["contact_count"], 2)
+        self.assertEqual(sum(t["contact_count"] for t in shorter["bs_power_profile"].values()), 2)
         self.assertIsNone(shorter["bs_ev_correlation_index"])
 
     def test_window_tiers_preserve_weights_and_boundary_membership(self):
@@ -57,7 +61,7 @@ class TrendTests(unittest.TestCase):
             ])],
             "2026-06-01", "2026-06-01",
         )
-        profile = result["summary"]["bs_ev_tier_profile"]
+        profile = result["summary"]["bs_power_profile"]
         low = profile["<75"]
         self.assertEqual(low["contact_count"], 2)
         self.assertAlmostEqual(low["weight_sum"], 1.6)
@@ -86,8 +90,8 @@ class TrendTests(unittest.TestCase):
                 self.assertIsNone(result["summary"]["bs_ev_correlation_index"])
         empty = get_trends([], "2026-06-01", "2026-06-01")
         self.assertEqual(empty["daily_data"], [])
-        self.assertEqual(empty["summary"]["contact_count"], 0)
-        for tier in empty["summary"]["bs_ev_tier_profile"].values():
+        self.assertEqual(sum(t["contact_count"] for t in empty["summary"]["bs_power_profile"].values()), 0)
+        for tier in empty["summary"]["bs_power_profile"].values():
             self.assertIsNone(tier["avg_bat_speed"])
             self.assertIsNone(tier["avg_exit_velo"])
 
@@ -108,7 +112,7 @@ class TrendTests(unittest.TestCase):
             ])],
             "2026-06-01", "2026-06-01",
         )
-        self.assertEqual(result["summary"]["contact_count"], 3)
+        self.assertEqual(sum(t["contact_count"] for t in result["summary"]["bs_power_profile"].values()), 3)
         self.assertAlmostEqual(result["summary"]["bs_ev_correlation_index"], -1)
         json.dumps(result, allow_nan=False)
 
@@ -524,11 +528,11 @@ class TrendTests(unittest.TestCase):
                         Pitch(1, description, 0, 0, 120, 80),
                     ])],
                     "2026-06-01", "2026-06-01",
-                )["summary"]["bs_ev_tier_profile"]
+                )["summary"]["bs_power_profile"]
                 tier_data = profile["80-85"]
                 self.assertEqual(tier_data["contact_count"], expected_count)
 
-    def test_power_vs_misses_profile_counts_all_nonbunt_swings(self):
+    def test_bs_whiff_profile_counts_all_nonbunt_swings(self):
         for description, expected_whiffs in (
             ("swinging_strike", 1),
             ("swinging_strike_blocked", 1),
@@ -548,7 +552,7 @@ class TrendTests(unittest.TestCase):
                         Pitch(1, description, 0, 0, 120, 80),
                     ])],
                     "2026-06-01", "2026-06-01",
-                )["summary"]["power_vs_misses_profile"]
+                )["summary"]["bs_whiff_profile"]
                 tier_data = profile["80-85"]
                 if expected_whiffs == "excluded":
                     self.assertEqual(tier_data["swing_count"], 0)
@@ -559,7 +563,7 @@ class TrendTests(unittest.TestCase):
                     self.assertEqual(tier_data["tiered_whiff_count"], expected_whiffs)
                     self.assertEqual(tier_data["tiered_whiff_rate"], expected_whiffs / tier_data["swing_count"])
 
-    def test_power_vs_misses_profile_pools_mixed_pitches_by_tier(self):
+    def test_bs_whiff_profile_pools_mixed_pitches_by_tier(self):
         result = get_trends(
             [
                 ExampleAtBat("2026-06-01", 70, pitches=[
@@ -587,7 +591,7 @@ class TrendTests(unittest.TestCase):
             ],
             "2026-06-01", "2026-06-02",
         )
-        profile = result["summary"]["power_vs_misses_profile"]
+        profile = result["summary"]["bs_whiff_profile"]
         for tier, swings, whiffs, rate in (
             ("<75", 0, 0, None),
             ("75-80", 2, 1, 0.5),

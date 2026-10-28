@@ -1,6 +1,6 @@
-# ⚾ True Offensive Rating (TOR)
+# ⚾ True Batter Profile (TBP)
 
-> *Decomposing plate appearances from terminal results into dynamic, pitch-level processes.*
+> *A comprehensive, pitch-level analytics engine for evaluating offensive threat, contact quality, and bat control.*
 
 ---
 
@@ -8,24 +8,30 @@
 
 In baseball, traditional offensive metrics evaluate plate appearances as terminal events. A hit, an out, a strikeout — each assigned a fixed value determined entirely by result. While this framework has proven analytically useful, it systematically discards the pitch-level process data from which offensive outcomes emerge.
 
-**TOR** proposes a complementary framework: decomposing each plate appearance into its underlying sequence of pitch-level events and evaluating offensive quality along both process and outcome dimensions.
+**The True Batter Profile (TBP)** is a comprehensive analytical engine that decomposes each plate appearance into its underlying sequence of pitch-level events, evaluating offensive quality along both process and outcome dimensions.
 
 Conventional statistics flatten plate appearances into binary results, obscuring meaningful within-at-bat variation. A 115-mph line drive caught by the shortstop, a 12-pitch strikeout featuring multiple hard fouls, and a first-pitch popup may register similarly — or identically — across OBP, OPS, and wRC+.
 
 Simultaneously, favorable outcomes can mask process-level vulnerabilities: elevated swing-and-miss tendencies, poor pitch selection, or unsustainable contact profiles that conventional metrics are not designed to surface.
 
-TOR addresses this by evaluating what the hitter did across the plate appearance — not merely what resulted from it — with the goal of more accurately estimating:
+TBP currently evaluates offensive quality through two distinct, complementary frameworks:
+1. **True Offensive Rating (TOR):** A process-weighted scoring system that evaluates count leverage, pitch sequence depth, and contact quality alongside a sliding scale of outcome informativeness.
+2. **Bat Speed & Power Matrix:** Multidimensional trend profiles that correlate swing speed, exit velocity, and whiff rates across bat-speed tiers, separating empty power from controlled, repeatable power.
+
+By evaluating what the hitter did across the plate appearance — not merely what resulted from it — TBP aims to more accurately estimate:
 * **Offensive Threat Quality** — how dangerous the hitter actually was
 * **Contact Sustainability** — whether the underlying contact profile is repeatable
 * **Pitcher Pressure** — the degree to which the hitter imposed competitive difficulty
+* **Bat Control** — how efficiently a player transfers bat speed into hard contact without an escalating swing-and-miss cost
 
 ---
 
 ## Development Status
 
-**Updated October 24, 2026.** TOR is an experimental analytical framework.
-The current focus is reliable metric calculation before interactive chart integration
-and later scoring calibration and predictive validation.
+**Updated October 28, 2026.** TBP is an experimental analytical framework, with TOR
+as its core scoring engine and a growing suite of bat-speed/power trend analytics
+alongside it. The current focus is reliable metric calculation before interactive
+chart integration and later scoring calibration and predictive validation.
 
 * **Working dashboard:** FastAPI/Jinja2 leaderboard and interactive player cards
   with CSV-backed summary metrics. The trend chart and color legend are illustrative;
@@ -102,6 +108,7 @@ include automatic ball/strike records.
 
 ## 📐 Metric Definition & Core Components
 
+### 1. True Offensive Rating (TOR)
 TOR is a process-weighted offensive rating that evaluates the competitive quality of individual plate appearances at pitch resolution. Each At-Bat is modeled as a dynamic sequence rather than a singular result, scored across the following components:
 
 * 📊 **Count Leverage** — progression through favorable and unfavorable count states.
@@ -109,12 +116,21 @@ TOR is a process-weighted offensive rating that evaluates the competitive qualit
 * 💥 **Contact Quality** — exit velocity and bat speed on all contacted pitches, including non-terminal fouls.
 * 🎯 **Terminal Outcome Value** — result-based contribution, dynamically weighted by outcome informativeness.
 
-### Outcome Weighting Philosophy
+#### Outcome Weighting Philosophy
 TOR does not treat outcome as irrelevant — it treats outcome as variably informative.
 * **High-Value Outcomes:** Certain results carry intrinsic value independent of process: a home run produces runs regardless of how it was generated, and extra-base hits eliminate base-out state uncertainty. These warrant substantial positive weighting.
 * **Uninformative Outcomes:** Conversely, routine negative outcomes — the weak rollover groundout, the first-pitch popup — are largely uninformative in isolation. A sharply-hit lineout and a weak groundout register identically in conventional statistics despite representing categorically different offensive processes.
 
 TOR therefore applies a **sliding outcome weight**: increasing emphasis for high-leverage productive events, decreasing emphasis where process-level signal dominates.
+
+### 2. Bat Speed & Power Matrix
+To evaluate bat control and power transfer independent of plate-appearance outcome, the trend engine bins every qualifying swing (bat speed >69 mph, non-bunt) into four bat-speed tiers: **69–75, 75–80, 80–85, and 85+ mph.**
+
+* **Power Profile** (`bs_power_profile`) — weighted average exit velocity per tier, plus cumulative hard (>=95 mph), very hard (>=105), and elite (>=115 mph) contact rates. Fouls and foul tips are weighted at 0.6 relative to balls in play (1.0).
+* **Whiff Profile** (`bs_whiff_profile`) — unweighted swing and whiff counts per tier, producing a tiered whiff rate.
+* **Controlled Power Profile** (`controlled_power_profile`) — merges the two, producing per-tier hard-contact-to-whiff ratios and a relative index (baseline = 100) that flags the bat-speed tier where a player's control breaks down.
+
+See **Development Status → Metric scope** above for the exact eligibility rules, weighting, and null-handling behind each field.
 
 ---
 
@@ -204,7 +220,7 @@ Tests use small synthetic examples and require no Statcast download.
 ```text
 ├── at_bat.py            # AtBat and Pitch classes (Core Data Model)
 ├── scorer.py            # TOR aggregation and player-level rating logic
-├── trends.py            # Date-filtered daily TOR, qualifying EV and bat-speed analysis
+├── trends.py            # Date-filtered daily TOR, bat-speed/power matrices, and whiff-tier trends
 ├── fetcher.py           # Statcast pitch-level data ingestion and At-Bat construction
 ├── main.py              # Entry point for running TOR analysis and leaderboard output
 ├── server.py            # FastAPI leaderboard and player-details routes

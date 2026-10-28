@@ -72,7 +72,26 @@ The summary also includes `power_vs_misses_profile`: unweighted swing counts,
 It includes all recognized non-bunt swings with finite bat speed >69 mph,
 regardless of EV availability. Whiffs are identified by pitch description, not
 missing EV. Empty tiers report a `null` whiff rate. This profile currently
-measures misses by speed, not hard-contact rates within each speed tier.
+measures misses by speed.
+
+`controlled_power_profile` combines the same tiers' swing/whiff counts with
+measured contact counts, missing-contact EV counts, and cumulative hard (>=95),
+very-hard (>=105), and elite (>=115 mph) contact counts. These event counts are
+unweighted, including fouls. `hard_rate`, `vhard_rate`, and `elite_rate` are
+recorded hard contacts per eligible swing; the corresponding `*_contact_rate`
+fields use measured contacts as their denominator. Missing EV is unknown, not
+known weak contact, so per-swing yields depend on measurement coverage.
+The `*_contact_to_whiff_ratio` fields are recorded tier-contact counts divided
+by whiff counts, not a physical efficiency or control score. Ratios are null
+without whiffs; per-contact rates are null without measured contacts; all rates
+are null without eligible swings. Empty tiers retain zero counts. Compare
+counts, coverage, yields and whiff rates together; these observations do not
+establish a player's optimal swing speed or diagnose mechanics.
+The `overall_*_to_whiff_ratio` fields pool counts across all speed tiers in the
+same date window. Each `*_to_whiff_relative_index` is 100 times the tier ratio
+divided by that pooled ratio: 100 matches baseline, and 180 means an 80% higher
+ratio, not an 80% higher per-swing yield. Indices are null for unavailable tier
+ratios or zero/unavailable baselines. This reference changes with the date window.
 
 Days without eligible TOR appearances retain their measurements and report TOR
 as `null`. In trend output, `plate_appearances` is the TOR-scored count;

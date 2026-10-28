@@ -609,3 +609,114 @@ class TrendTests(unittest.TestCase):
             sum(data["tiered_whiff_count"] for data in profile.values()),
             sum(day["speedq_whiff_count"] for day in result["daily_data"]),
         )
+
+    def test_controlled_power_profile_includes_all_tiers(self):
+        result = get_trends(
+            [
+                ExampleAtBat("2026-06-01", 70, pitches=[
+                    Pitch(1, "swinging_strike", 0, 0, 120, 72),
+                    Pitch(2, "foul", 0, 0, 95, 80),
+                    Pitch(3, "hit_into_play", 0, 0, 105, 81),
+                    Pitch(4, "swinging_strike_blocked", 0, 0, 120, 82),
+                    Pitch(5, "foul", 0, 0, None, 83),
+                    Pitch(6, "foul_bunt", 0, 0, 120, 82),
+                    Pitch(7, "hit_into_play", 0, 0, 120, 69),
+                ]),
+                ExampleAtBat("2026-06-02", 70, pitches=[
+                    Pitch(1, "hit_into_play_score", 0, 0, 115, 84),
+                    Pitch(2, "swinging_strike", 0, 0, None, 84),
+                    Pitch(3, "foul_tip", 0, 0, 70, 80),
+                    Pitch(4, "hit_into_play", 0, 0, 100, 85),
+                ]),
+                ExampleAtBat("2026-07-01", 70, pitches=[
+                    Pitch(1, "hit_into_play", 0, 0, 120, 80),
+                ]),
+            ],
+            "2026-06-01", "2026-06-02",
+        )
+        profile = result["summary"]["controlled_power_profile"]
+        self.assertEqual(set(profile), {"<75", "75-80", "80-85", "85+"})
+        for tier, data in profile.items():
+            with self.subTest(tier=tier):
+                self.assertEqual(
+                    data["swing_count"],
+                    data["whiff_count"] + data["contact_count"]
+                    + data["missing_contact_ev_count"],
+                )
+                self.assertLessEqual(data["elite_count"], data["vhard_count"])
+                self.assertLessEqual(data["vhard_count"], data["hard_count"])
+                self.assertLessEqual(data["hard_count"], data["contact_count"])
+
+        mixed = profile["80-85"]
+        self.assertEqual(mixed["swing_count"], 7)
+        self.assertEqual(mixed["whiff_count"], 2)
+        self.assertEqual(mixed["contact_count"], 4)
+        self.assertEqual(mixed["missing_contact_ev_count"], 1)
+        self.assertAlmostEqual(mixed["whiff_rate"], 2 / 7)
+        for prefix, count in (("hard", 3), ("vhard", 2), ("elite", 1)):
+            self.assertEqual(mixed[f"{prefix}_count"], count)
+            self.assertAlmostEqual(mixed[f"{prefix}_rate"], count / 7)
+            self.assertAlmostEqual(mixed[f"{prefix}_contact_rate"], count / 4)
+            self.assertAlmostEqual(mixed[f"{prefix}_contact_to_whiff_ratio"], count / 2)
+        for prefix, total in (("hard", 4), ("vhard", 2), ("elite", 1)):
+            baseline = total / 3
+            self.assertAlmostEqual(mixed[f"overall_{prefix}_to_whiff_ratio"], baseline)
+            self.assertAlmostEqual(
+                mixed[f"{prefix}_to_whiff_relative_index"],
+                100 * mixed[f"{prefix}_contact_to_whiff_ratio"] / baseline,
+            )
+            self.assertEqual(profile["<75"][f"{prefix}_to_whiff_relative_index"], 0)
+            self.assertIsNone(profile["85+"][f"{prefix}_to_whiff_relative_index"])
+            self.assertIsNone(profile["75-80"][f"{prefix}_to_whiff_relative_index"])
+
+        self.assertEqual(profile["<75"]["whiff_rate"], 1)
+        self.assertEqual(profile["<75"]["hard_rate"], 0)
+        self.assertIsNone(profile["<75"]["hard_contact_rate"])
+        self.assertEqual(profile["<75"]["hard_contact_to_whiff_ratio"], 0)
+        self.assertEqual(profile["85+"]["hard_rate"], 1)
+        self.assertEqual(profile["85+"]["whiff_rate"], 0)
+        self.assertIsNone(profile["85+"]["hard_contact_to_whiff_ratio"])
+        empty = profile["75-80"]
+        self.assertEqual(empty["swing_count"], 0)
+        for key in ("whiff_rate", "hard_rate", "hard_contact_rate", "hard_contact_to_whiff_ratio"):
+            self.assertIsNone(empty[key])
+        json.dumps(result, allow_nan=False)
+
+    def test_controlled_power_profile_handles_empty_input_and_invalid_contact_ev(self):
+        for ev in (None, 0, -1, math.nan, math.inf):
+            with self.subTest(exit_velo=ev):
+                result = get_trends(
+                    [ExampleAtBat("2026-06-01", 70, pitches=[
+                        Pitch(1, "foul", 0, 0, ev, 80),
+                    ])],
+                    "2026-06-01", "2026-06-01",
+                )
+                data = result["summary"]["controlled_power_profile"]["80-85"]
+                self.assertEqual(data["swing_count"], 1)
+                self.assertEqual(data["contact_count"], 0)
+                self.assertEqual(data["missing_contact_ev_count"], 1)
+                self.assertEqual(data["whiff_rate"], 0)
+                self.assertEqual(data["hard_rate"], 0)
+                self.assertIsNone(data["hard_contact_rate"])
+                self.assertIsNone(data["hard_contact_to_whiff_ratio"])
+                json.dumps(result, allow_nan=False)
+        empty = get_trends([], "2026-06-01", "2026-06-01")
+        self.assertEqual(empty["daily_data"], [])
+        for data in empty["summary"]["controlled_power_profile"].values():
+            self.assertEqual(data["swing_count"], 0)
+            self.assertIsNone(data["hard_rate"])
+            self.assertIsNone(data["hard_to_whiff_relative_index"])
+
+    def test_relative_power_index_is_unavailable_for_zero_baseline(self):
+        result = get_trends(
+            [ExampleAtBat("2026-06-01", 70, pitches=[
+                Pitch(1, "swinging_strike", 0, 0, 0, 80),
+                Pitch(2, "foul", 0, 1, 70, 81),
+            ])],
+            "2026-06-01", "2026-06-01",
+        )
+        data = result["summary"]["controlled_power_profile"]["80-85"]
+        for prefix in ("hard", "vhard", "elite"):
+            self.assertEqual(data[f"overall_{prefix}_to_whiff_ratio"], 0)
+            self.assertEqual(data[f"{prefix}_contact_to_whiff_ratio"], 0)
+            self.assertIsNone(data[f"{prefix}_to_whiff_relative_index"])

@@ -118,7 +118,7 @@ def get_trends(player_at_bats, start_date, end_date):
                             daily_bat_speeds.append(bat_speed)
                             daily_speedq_swings += 1
                             daily_power_vs_misses_pairs.append(
-                                (bat_speed, pitch.description)
+                                (bat_speed, pitch.description, exit_velo)
                             )
                             if is_whiff:
                                 daily_speedq_whiffs += 1
@@ -280,25 +280,34 @@ def get_trends(player_at_bats, start_date, end_date):
     # Pool contacts across the selected window, not daily correlations.
     bs_ev_correlation_index = None
 
-    bs_ev_tier_profile = {
+    bs_power_profile = {
         tier: {
             "bs_sum": 0.0,
             "weighted_ev_sum": 0.0,
             "weight_sum": 0.0,
             "contact_count": 0,
+            "hard_count": 0,
+            "vhard_count": 0,
+            "elite_count": 0,
         }
         for tier in BAT_SPEED_PROFILE_TIERS
     }
     for bat_speed, exit_velo, weight in qualifying_power_pairs:
         tier = bat_speed_profile_tier(bat_speed)
 
-        data = bs_ev_tier_profile[tier]
+        data = bs_power_profile[tier]
         data["bs_sum"] += bat_speed * weight
         data["weighted_ev_sum"] += exit_velo * weight
         data["weight_sum"] += weight
         data["contact_count"] += 1
+        if exit_velo >= hard_exit_velo_cutoff:
+            data["hard_count"] += 1
+        if exit_velo >= very_hard_exit_velo_cutoff:
+            data["vhard_count"] += 1
+        if exit_velo >= elite_exit_velo_cutoff:
+            data["elite_count"] += 1
 
-    for data in bs_ev_tier_profile.values():
+    for data in bs_power_profile.values():
         if data["weight_sum"] > 0:
             data["avg_bat_speed"] = data["bs_sum"] / data["weight_sum"]
             data["avg_exit_velo"] = data["weighted_ev_sum"] / data["weight_sum"]
@@ -307,7 +316,7 @@ def get_trends(player_at_bats, start_date, end_date):
             data["avg_exit_velo"] = None
 
     populated_tiers = [
-        data for data in bs_ev_tier_profile.values() if data["weight_sum"] > 0
+        data for data in bs_power_profile.values() if data["weight_sum"] > 0
     ]
     if len(populated_tiers) >= 3:
         bat_speed_means = [data["avg_bat_speed"] for data in populated_tiers]
@@ -320,37 +329,124 @@ def get_trends(player_at_bats, start_date, end_date):
                 np.corrcoef(bat_speed_means, exit_velo_means)[0, 1]
             )
 
-    power_vs_misses_profile = {
+    bs_whiff_profile = {
         tier: {
             "swing_count": 0,
             "tiered_whiff_count": 0,
             "tiered_whiff_rate": None,
+            "missing_contact_ev_count": 0,
         }
         for tier in BAT_SPEED_PROFILE_TIERS
     }
 
-    for bat_speed, description in qualifying_power_vs_misses_pairs:
+    for bat_speed, description, exit_velo in qualifying_power_vs_misses_pairs:
         tier = bat_speed_profile_tier(bat_speed)
 
-        data = power_vs_misses_profile[tier]
+        data = bs_whiff_profile[tier]
         data["swing_count"] += 1
         if description in WHIFF_DESCRIPTIONS:
             data["tiered_whiff_count"] += 1
+        elif exit_velo is None or not math.isfinite(exit_velo) or exit_velo <= 0:
+            data["missing_contact_ev_count"] += 1
 
-    for data in power_vs_misses_profile.values():
+    for data in bs_whiff_profile.values():
         data["tiered_whiff_rate"] = (
             data["tiered_whiff_count"] / data["swing_count"]
             if data["swing_count"] else None
         )
 
+    bs_controlled_power_profile = {}
+
+    # Player baseline for this date window: pooled power contacts / pooled whiffs.
+    overall_whiff_count = sum(t["tiered_whiff_count"] for t in bs_whiff_profile.values())
+    overall_hard_count  = sum(t["hard_count"] for t in bs_power_profile.values())
+    overall_vhard_count = sum(t["vhard_count"] for t in bs_power_profile.values())
+    overall_elite_count = sum(t["elite_count"] for t in bs_power_profile.values())
+    overall_hard_to_whiff_ratio = overall_hard_count / overall_whiff_count if overall_whiff_count else None
+    overall_vhard_to_whiff_ratio = overall_vhard_count / overall_whiff_count if overall_whiff_count else None
+    overall_elite_to_whiff_ratio = overall_elite_count / overall_whiff_count if overall_whiff_count else None
+
+    for tier in BAT_SPEED_PROFILE_TIERS:
+        bs_power_data = bs_power_profile[tier]
+        bs_whiff_data = bs_whiff_profile[tier]
+        total_swings = bs_whiff_data["swing_count"]
+        contact_count = bs_power_data["contact_count"]
+
+        whiff_count = bs_whiff_data["tiered_whiff_count"]
+        whiff_rate = bs_whiff_data["tiered_whiff_rate"]
+        hard_count = bs_power_data["hard_count"]
+        vhard_count = bs_power_data["vhard_count"]
+        elite_count = bs_power_data["elite_count"]
+
+        hard_rate = hard_count / total_swings if total_swings else None
+        vhard_rate = vhard_count / total_swings if total_swings else None
+        elite_rate = elite_count / total_swings if total_swings else None
+
+        # Recorded power contacts per miss in this tier; no misses means undefined.
+        hard_contact_to_whiff_ratio = hard_count / whiff_count if whiff_count else None
+        vhard_contact_to_whiff_ratio = vhard_count / whiff_count if whiff_count else None
+        elite_contact_to_whiff_ratio = elite_count / whiff_count if whiff_count else None
+
+        # 100 matches the window baseline; 180 means an 80% higher ratio, not yield.
+        # Undefined tier ratios or zero/undefined baselines cannot be indexed.
+        hard_to_whiff_relative_index = (
+            100 * hard_contact_to_whiff_ratio / overall_hard_to_whiff_ratio
+            if hard_contact_to_whiff_ratio is not None and overall_hard_to_whiff_ratio
+            else None
+        )
+        vhard_to_whiff_relative_index = (
+            100 * vhard_contact_to_whiff_ratio / overall_vhard_to_whiff_ratio
+            if vhard_contact_to_whiff_ratio is not None and overall_vhard_to_whiff_ratio
+            else None
+        )
+        elite_to_whiff_relative_index = (
+            100 * elite_contact_to_whiff_ratio / overall_elite_to_whiff_ratio
+            if elite_contact_to_whiff_ratio is not None and overall_elite_to_whiff_ratio
+            else None
+        )
+
+        bs_controlled_power_profile[tier] = {
+            "swing_count": total_swings,
+            "whiff_count": whiff_count,
+            "contact_count": contact_count,
+            "missing_contact_ev_count": bs_whiff_data["missing_contact_ev_count"],
+            "hard_count": hard_count,
+            "vhard_count": vhard_count,
+            "elite_count": elite_count,
+            "overall_whiff_count": overall_whiff_count,
+            "overall_hard_count": overall_hard_count,
+            "overall_vhard_count": overall_vhard_count,
+            "overall_elite_count": overall_elite_count,
+
+            # Recorded hard-contact yield per eligible swing, not imputed EV.
+            "whiff_rate": whiff_rate,
+            "hard_rate": hard_rate,
+            "vhard_rate": vhard_rate,
+            "elite_rate": elite_rate,
+            "hard_contact_rate": hard_count / contact_count if contact_count else None,
+            "vhard_contact_rate": vhard_count / contact_count if contact_count else None,
+            "elite_contact_rate": elite_count / contact_count if contact_count else None,
+            # Yield / whiff rate simplifies to measured hard contacts / misses.
+            "hard_contact_to_whiff_ratio": hard_contact_to_whiff_ratio,
+            "vhard_contact_to_whiff_ratio": vhard_contact_to_whiff_ratio,
+            "elite_contact_to_whiff_ratio": elite_contact_to_whiff_ratio,
+            "overall_hard_to_whiff_ratio": overall_hard_to_whiff_ratio,
+            "overall_vhard_to_whiff_ratio": overall_vhard_to_whiff_ratio,
+            "overall_elite_to_whiff_ratio": overall_elite_to_whiff_ratio,
+            "hard_to_whiff_relative_index": hard_to_whiff_relative_index,
+            "vhard_to_whiff_relative_index": vhard_to_whiff_relative_index,
+            "elite_to_whiff_relative_index": elite_to_whiff_relative_index,
+        }
+
     return {
         "daily_data": daily_data,
         "summary": {
             "bs_ev_correlation_index": bs_ev_correlation_index,
-            "bs_ev_tier_profile": bs_ev_tier_profile,
+            "bs_ev_tier_profile": bs_power_profile,
             "contact_count": len(qualifying_power_pairs),
             "populated_tier_count": len(populated_tiers),
-            "tiered_whiff_rate": {tier: data["tiered_whiff_rate"] for tier, data in power_vs_misses_profile.items()},
-            "power_vs_misses_profile": power_vs_misses_profile,
+            "tiered_whiff_rate": {tier: data["tiered_whiff_rate"] for tier, data in bs_whiff_profile.items()},
+            "power_vs_misses_profile": bs_whiff_profile,
+            "controlled_power_profile": bs_controlled_power_profile,
         },
     }
